@@ -6,10 +6,10 @@ import 'package:lextax_analysis/model/token_type.dart';
 class Lexer {
   final String input;
   int _cursor = 0;
-  final List<Token> tokens = [];
+  final tokens = <Token>[];
 
   // Matchers
-  final List<TokenType> _tokenTypes = [
+  final _tokenTypes = <TokenType>[
     TokenType(RegExp(r'^\s+'), 'WHITESPACE'),
     TokenType(RegExp(r'^\/\/.*'), 'COMMENT'),
     TokenType(RegExp(r'^\/\*[\s\S]*?\*\/'), 'COMMENT'),
@@ -27,9 +27,7 @@ class Lexer {
 
   Lexer(this.input);
 
-  bool _hasMore() {
-    return _cursor < input.length;
-  }
+  bool _hasMore() => _cursor < input.length;
 
   void tokenize() {
     tokens.clear();
