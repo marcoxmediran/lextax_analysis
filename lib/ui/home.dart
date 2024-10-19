@@ -1,7 +1,9 @@
 import 'dart:math';
+import 'dart:convert';
 
-import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_quill/flutter_quill.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:lextax_analysis/model/lexer.dart';
 import 'package:lextax_analysis/model/token.dart';
 
@@ -13,7 +15,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  QuillController _controller = QuillController.basic();
+  final QuillController _controller = QuillController.basic();
   final _tokenRows = <DataRow>[];
 
   void _populateTokens(List<Token> tokens) {
@@ -49,13 +51,13 @@ class _HomePageState extends State<HomePage> {
       body: Row(
         children: [
           Container(
-            width: max(_getScreenWidth() * 0.4, 400),
+            width: max(_getScreenWidth() * 0.3, 350),
             decoration: BoxDecoration(color: Theme.of(context).hoverColor),
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 children: [
-                  const Text('Input'),
+                  const Text('Edit your code here'),
                   _spawnVerticalSpacer(16.0),
                   Expanded(
                     child: Container(
@@ -76,8 +78,24 @@ class _HomePageState extends State<HomePage> {
                   ),
                   _spawnVerticalSpacer(16.0),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
+                      IconButton(
+                        onPressed: () async {
+                          FilePickerResult? result =
+                              await FilePicker.platform.pickFiles();
+                          if (result != null) {
+                            PlatformFile file = result.files.first;
+                            String input = utf8.decode(file.bytes as List<int>);
+                            setState(() {
+                              _controller.document.delete(0, _controller.document.length);
+                              _controller.document.insert(0, input);
+                            });
+                          }
+                        },
+                        icon: const Icon(Icons.upload_outlined),
+                        tooltip: 'Upload a File',
+                      ),
+                      const Spacer(),
                       FilledButton.icon(
                         onPressed: () {
                           Lexer lexer =
@@ -85,16 +103,17 @@ class _HomePageState extends State<HomePage> {
                           lexer.tokenize();
                           _populateTokens(lexer.tokens);
                         },
-                        label: const Text('Lexical Analaysis'),
+                        label: const Text('Tokenize'),
                         icon: const Icon(Icons.cookie_outlined),
                         style: FilledButton.styleFrom(
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(4.0)),
                         ),
                       ),
+                      _spawnHorizontalSpacer(16.0),
                       FilledButton.icon(
                         onPressed: () {},
-                        label: const Text('Syntax Analysis'),
+                        label: const Text('Analyze'),
                         icon: const Icon(Icons.code_outlined),
                         style: FilledButton.styleFrom(
                           shape: RoundedRectangleBorder(
@@ -113,28 +132,40 @@ class _HomePageState extends State<HomePage> {
                 slivers: [
                   const SliverAppBar(
                     title: Center(
-                      child: Text('\$PROJECT_NAME Bla Bla'),
+                      child: Text('PPL 3-1N Group 1 Project'),
                     ),
                   ),
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        children: [
-                          SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: DataTable(
-                              columns: const [
-                                DataColumn(label: Text('Lexeme')),
-                                DataColumn(label: Text('Token')),
+                  _tokenRows.isNotEmpty
+                      ? SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              children: [
+                                SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: DataTable(
+                                    columns: const [
+                                      DataColumn(label: Text('Lexeme')),
+                                      DataColumn(label: Text('Token')),
+                                    ],
+                                    rows: _tokenRows,
+                                  ),
+                                ),
                               ],
-                              rows: _tokenRows,
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                  ),
+                        )
+                      : const SliverFillRemaining(
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.notification_important_outlined),
+                                Text('No input yet'),
+                              ],
+                            ),
+                          ),
+                        ),
                 ],
               ),
             ),
@@ -147,4 +178,8 @@ class _HomePageState extends State<HomePage> {
 
 Widget _spawnVerticalSpacer(double height) {
   return SizedBox(height: height);
+}
+
+Widget _spawnHorizontalSpacer(double width) {
+  return SizedBox(width: width);
 }
