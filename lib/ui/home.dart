@@ -83,16 +83,17 @@ class _HomePageState extends State<HomePage> {
                         onPressed: () async {
                           FilePickerResult? result =
                               await FilePicker.platform.pickFiles(
-                                type: FileType.custom,
-                                allowedExtensions: ['file'],
-                                allowMultiple: false,
-                                withData: true,
-                              );
+                            type: FileType.custom,
+                            allowedExtensions: ['file'],
+                            allowMultiple: false,
+                            withData: true,
+                          );
                           if (result != null && result.files.isNotEmpty) {
                             final file = result.files.first;
                             final input = utf8.decode(file.bytes as List<int>);
                             setState(() {
-                              _controller.document.delete(0, _controller.document.length);
+                              _controller.document
+                                  .delete(0, _controller.document.length);
                               _controller.document.insert(0, input);
                             });
                           }
