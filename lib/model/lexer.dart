@@ -1,7 +1,8 @@
-import 'dart:collection';
-
 import 'package:lextax_analysis/model/token.dart';
 import 'package:lextax_analysis/model/token_type.dart';
+import 'package:lextax_analysis/model/symbol_definition.dart' '';
+import 'package:lextax_analysis/model/keyword_definition.dart';
+import 'package:lextax_analysis/model/operator_definition.dart';
 
 class Lexer {
   final String input;
@@ -10,20 +11,18 @@ class Lexer {
 
   // Matchers
   final _tokenTypes = <TokenType>[
-    TokenType(RegExp(r'^\s+'), 'WHITESPACE'),
-    TokenType(RegExp(r'^\/\/.*'), 'COMMENT'),
-    TokenType(RegExp(r'^\/\*[\s\S]*?\*\/'), 'COMMENT'),
-    TokenType(RegExp(r'^"[^"]*"'), 'STRING'),
-    TokenType(RegExp(r"^'[^']*'"), 'STRING'),
-    TokenType(RegExp(r'^[a-zA-Z][a-zA-Z0-9_]*'), 'WORD'),
-    TokenType(RegExp(r'^\d+\.\d+'), 'REAL'),
-    TokenType(RegExp(r'^\d+'), 'NUMBER'),
-    TokenType(RegExp(r'^[+-\\*/=<>!%]'), 'OPERATOR'),
-    TokenType(RegExp(r'^[.,;(){}\[\]]'), 'SYMBOL'),
+    TokenType(RegExp(r'''^\s+'''), 'WHITESPACE'),
+    TokenType(RegExp(r'''^\/\/.*'''), 'COMMENT'),
+    TokenType(RegExp(r'''^\/\*[\s\S]*?\*\/'''), 'COMMENT'),
+    TokenType(RegExp(r'''^"[^"]*"'''), 'STRING'),
+    TokenType(RegExp(r"""^'[^']*'"""), 'STRING'),
+    TokenType(RegExp(r'''^[a-zA-Z][a-zA-Z0-9_]*'''), 'WORD'),
+    TokenType(RegExp(r'''^\d+\.\d+'''), 'REAL'),
+    TokenType(RegExp(r'''^\d+'''), 'NUMBER'),
+    TokenType(RegExp(r'''^(\+\+)|^(--)|^(\+\=)|^(-=)|^(\*=)|^(\/=)|^(%=)|^(>=)|^(<=)|^(==)|^(!=)|^(\|\|)|^(&&)'''), 'OPERATOR'),
+    TokenType(RegExp(r'''^[\+\-\\*/=<>!%]'''), 'OPERATOR'),
+    TokenType(RegExp(r'''^[.,:;(){}\[\]]'''), 'SYMBOL'),
   ];
-  final _keywordSet = HashSet<String>.from(['if', 'else', 'return', 'for', 'while', 'break', 'continue', 'main']);
-  final _dataTypeSet = HashSet<String>.from(['int', 'float', 'string', 'char', 'bool', 'void']);
-  final _booleanSet = HashSet<String>.from(['true', 'false']);
 
   Lexer(this.input);
 
@@ -55,15 +54,15 @@ class Lexer {
         _cursor += value!.length;
         Token token = Token(value, _tokenTypes[i].type);
         if (token.type == "WORD") {
-          if (_keywordSet.contains(token.value)) {
-            token.type = "KEYWORD";
-          } else if (_dataTypeSet.contains(token.value)) {
-            token.type = "DATA_TYPE";
-          } else if (_booleanSet.contains(token.value)) {
-            token.type = "BOOL";
+          if (keywordSet.containsKey(token.value)) {
+            token.type = keywordSet[token.value]!;
           } else {
             token.type = "IDENTIFIER";
           }
+        } else if (token.type == "OPERATOR") {
+          token.type = operatorSet[token.value]!;
+        } else if (token.type == "SYMBOL") {
+          token.type = symbolSet[token.value]!;
         }
         return token;
       }

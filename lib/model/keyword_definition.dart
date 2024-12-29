@@ -1,0 +1,28 @@
+Map keywordSet = {
+  // Keywords
+  'action': 'ACTION_KEYWORD',
+  'contents': 'CONTENTS_KEYWORD',
+  'input_secure_storage': 'ISS_KEYWORD',
+  'label': 'LABEL_KEYWORD',
+  'main': 'MAIN_KEYWORD',
+  'purify_dev': 'PURIFY_DEV_KEYWORD',
+  // Reserved Words
+  'array': 'ARRAY_KEYWORD',
+  'bool': 'BOOL_KEYWORD',
+  'button': 'BUTTON_KEYWORD',
+  'double': 'DOUBLE_KEYWORD',
+  'else': 'ELSE_KEYWORD',
+  'false': 'FALSE_KEYWORD',
+  'for': 'FOR_KEYWORD',
+  'gui': 'GUI_KEYWORD',
+  'if': 'IF_KEYWORD',
+  'input': 'INPUT_KEYWORD',
+  'int': 'INT_KEYWORD',
+  'new': 'NEW_KEYWORD',
+  'print': 'PRINT_KEYWORD',
+  'return': 'RETURN_KEYWORD',
+  'string': 'STRING_KEYWORD',
+  'true': 'TRUE_KEYWORD',
+  'void': 'VOID_KEYWORD',
+  'while': 'WHILE_KEYWORD',
+};
