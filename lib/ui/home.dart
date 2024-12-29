@@ -6,6 +6,7 @@ import 'package:flutter_quill/flutter_quill.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:lextax_analysis/model/lexer.dart';
 import 'package:lextax_analysis/model/token.dart';
+import 'package:lextax_analysis/globals.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -84,18 +85,28 @@ class _HomePageState extends State<HomePage> {
                           FilePickerResult? result =
                               await FilePicker.platform.pickFiles(
                             type: FileType.custom,
-                            allowedExtensions: ['file'],
+                            allowedExtensions: ['xbox'],
                             allowMultiple: false,
                             withData: true,
                           );
                           if (result != null && result.files.isNotEmpty) {
                             final file = result.files.first;
                             final input = utf8.decode(file.bytes as List<int>);
-                            setState(() {
-                              _controller.document
-                                  .delete(0, _controller.document.length);
-                              _controller.document.insert(0, input);
-                            });
+                            final fileExtension =
+                                file.name.substring(file.name.length - 4);
+                            if (fileExtension == 'xbox') {
+                              setState(() {
+                                _controller.document
+                                    .delete(0, _controller.document.length);
+                                _controller.document.insert(0, input);
+                              });
+                            } else {
+                              const SnackBar snackbar = SnackBar(
+                                content: Text('Invalid file extension'),
+                                behavior: SnackBarBehavior.floating,
+                              );
+                              Globals.scaffoldMessengerKey.currentState?.showSnackBar(snackbar);
+                            }
                           }
                         },
                         icon: const Icon(Icons.upload_outlined),
@@ -138,7 +149,7 @@ class _HomePageState extends State<HomePage> {
                 slivers: [
                   const SliverAppBar(
                     title: Center(
-                      child: Text('PPL 3-1N Group 1 Project'),
+                      child: Text('xbox Lexer and Parser'),
                     ),
                   ),
                   _tokenRows.isNotEmpty
