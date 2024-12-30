@@ -19,7 +19,10 @@ class Lexer {
     TokenType(RegExp(r'''^[a-zA-Z][a-zA-Z0-9_]*'''), 'WORD'),
     TokenType(RegExp(r'''^\d+\.\d+'''), 'REAL'),
     TokenType(RegExp(r'''^\d+'''), 'NUMBER'),
-    TokenType(RegExp(r'''^(\+\+)|^(--)|^(\+\=)|^(-=)|^(\*=)|^(\/=)|^(%=)|^(>=)|^(<=)|^(==)|^(!=)|^(\|\|)|^(&&)'''), 'OPERATOR'),
+    TokenType(
+        RegExp(
+            r'''^(\+\+)|^(--)|^(\+\=)|^(-=)|^(\*=)|^(\/=)|^(%=)|^(>=)|^(<=)|^(==)|^(!=)|^(\|\|)|^(&&)'''),
+        'OPERATOR'),
     TokenType(RegExp(r'''^[\+\-\\*/=<>!%]'''), 'OPERATOR'),
     TokenType(RegExp(r'''^[.,:;(){}\[\]]'''), 'SYMBOL'),
   ];
@@ -33,10 +36,10 @@ class Lexer {
     while (_hasMore()) {
       Token? token = _nextToken();
 
-      if (token == null) {
-        print('[ERROR] Unsupported token');
+      if (token.type == 'INVALID') {
+        tokens.add(token);
         return;
-      } else if (token.type == "WHITESPACE" || token.type == "COMMENT") {
+      } else if (token.type == 'WHITESPACE' || token.type == 'COMMENT') {
         continue;
       } else {
         tokens.add(token);
@@ -44,7 +47,7 @@ class Lexer {
     }
   }
 
-  Token? _nextToken() {
+  Token _nextToken() {
     for (int i = 0; i < _tokenTypes.length; i++) {
       RegExpMatch? match =
           _tokenTypes[i].regex.firstMatch(input.substring(_cursor));
@@ -53,29 +56,21 @@ class Lexer {
         String? value = match[0];
         _cursor += value!.length;
         Token token = Token(value, _tokenTypes[i].type);
-        if (token.type == "WORD") {
+        if (token.type == 'WORD') {
           if (keywordSet.containsKey(token.value)) {
             token.type = keywordSet[token.value]!;
           } else {
-            token.type = "IDENTIFIER";
+            token.type = 'IDENTIFIER';
           }
-        } else if (token.type == "OPERATOR") {
+        } else if (token.type == 'OPERATOR') {
           token.type = operatorSet[token.value]!;
-        } else if (token.type == "SYMBOL") {
+        } else if (token.type == 'SYMBOL') {
           token.type = symbolSet[token.value]!;
         }
         return token;
       }
     }
 
-    return null;
-  }
-
-  void printTokens() {
-    print('[INPUT]\n$input\n');
-    print('[OUTPUT]');
-    for (Token token in tokens) {
-      print(token);
-    }
+    return Token(input.substring(_cursor), 'INVALID_TOKEN');
   }
 }
