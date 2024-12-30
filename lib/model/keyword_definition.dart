@@ -18,7 +18,7 @@ Map keywordSet = {
   'if': 'IF_KEYWORD',
   'input': 'INPUT_KEYWORD',
   'int': 'INT_KEYWORD',
-  'new': 'NEW_KEYWORD',
+  'new': 'NEW_NOISEWORD',
   'print': 'PRINT_KEYWORD',
   'return': 'RETURN_KEYWORD',
   'string': 'STRING_KEYWORD',
