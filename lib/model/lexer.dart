@@ -36,7 +36,7 @@ class Lexer {
     while (_hasMore()) {
       Token? token = _nextToken();
 
-      if (token.type == 'INVALID') {
+      if (token.type == 'INVALID_TOKEN') {
         tokens.add(token);
         return;
       } else if (token.type == 'WHITESPACE' || token.type == 'COMMENT') {
