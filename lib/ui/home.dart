@@ -7,6 +7,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:lextax_analysis/model/lexer.dart';
 import 'package:lextax_analysis/model/token.dart';
 import 'package:lextax_analysis/globals.dart';
+import 'package:lextax_analysis/model/csv_handler.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -18,6 +19,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final QuillController _controller = QuillController.basic();
   final _tokenRows = <DataRow>[];
+  final CsvHandler _csvHandler = CsvHandler();
 
   void _populateTokens(List<Token> tokens) {
     setState(() {
@@ -105,7 +107,8 @@ class _HomePageState extends State<HomePage> {
                                 content: Text('Invalid file extension'),
                                 behavior: SnackBarBehavior.floating,
                               );
-                              Globals.scaffoldMessengerKey.currentState?.showSnackBar(snackbar);
+                              Globals.scaffoldMessengerKey.currentState
+                                  ?.showSnackBar(snackbar);
                             }
                           }
                         },
@@ -114,11 +117,17 @@ class _HomePageState extends State<HomePage> {
                       ),
                       const Spacer(),
                       FilledButton.icon(
-                        onPressed: () {
+                        onPressed: () async {
                           Lexer lexer =
                               Lexer(_controller.document.toPlainText());
                           lexer.tokenize();
-                          _populateTokens(lexer.tokens);
+                          if (lexer.tokens.isNotEmpty) {
+                            _populateTokens(lexer.tokens);
+                            List<List<String>> tokenList =
+                                _csvHandler.tokensToList(lexer.tokens);
+                            String csv = _csvHandler.listToCsv(tokenList);
+                            await _csvHandler.downloadCsv(csv);
+                          }
                         },
                         label: const Text('Tokenize'),
                         icon: const Icon(Icons.cookie_outlined),
