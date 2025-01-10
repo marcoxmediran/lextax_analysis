@@ -17,8 +17,8 @@ class Lexer {
     TokenType(RegExp(r'''^"[^"]*"'''), 'STRING'),
     TokenType(RegExp(r"""^'[^']*'"""), 'STRING'),
     TokenType(RegExp(r'''^[a-zA-Z][a-zA-Z0-9_]*'''), 'WORD'),
-    TokenType(RegExp(r'''^\d+\.\d+'''), 'REAL'),
-    TokenType(RegExp(r'''^\d+'''), 'NUMBER'),
+    TokenType(RegExp(r'''^(\d\_|\d)*\d\.(\d\_|\d)*\d'''), 'REAL'),
+    TokenType(RegExp(r'''^(\d\_|\d)*\d'''), 'NUMBER'),
     TokenType(
         RegExp(
             r'''^(\+\+)|^(--)|^(\+\=)|^(-=)|^(\*=)|^(\/=)|^(%=)|^(>=)|^(<=)|^(==)|^(!=)|^(\|\|)|^(&&)'''),
