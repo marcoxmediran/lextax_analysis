@@ -1,3 +1,4 @@
+import 'package:sanitize_html/sanitize_html.dart' show sanitizeHtml;
 import 'package:lextax_analysis/model/token.dart';
 import 'package:lextax_analysis/model/token_type.dart';
 import 'package:lextax_analysis/model/symbol_definition.dart' '';
@@ -42,6 +43,15 @@ class Lexer {
       } else if (token.type == 'WHITESPACE') {
         continue;
       } else {
+        if (token.type == 'STRING' && tokens.length >= 4) {
+          int latestIndex = tokens.length - 1;
+          if (tokens[latestIndex].type == 'COLON' &&
+              tokens[latestIndex - 1].type == 'VALUE_RESWORD' &&
+              tokens[latestIndex - 2].type == 'LEFT_PAREN' &&
+              tokens[latestIndex - 3].type == 'PURIFY_DEV_RESWORD') {
+            token.value = sanitizeHtml(token.value);
+          }
+        }
         tokens.add(token);
       }
     }
@@ -55,7 +65,8 @@ class Lexer {
       if (match != null) {
         String? value = match[0];
         _cursor += value!.length;
-        Token token = Token(value, _tokenTypes[i].type, _cursor - value.length, value.length);
+        Token token = Token(
+            value, _tokenTypes[i].type, _cursor - value.length, value.length);
         if (token.type == 'WORD') {
           if (keywordSet.containsKey(token.value)) {
             token.type = keywordSet[token.value]!;
@@ -71,6 +82,7 @@ class Lexer {
       }
     }
 
-    return Token(input.substring(_cursor), 'INVALID_TOKEN', _cursor, input.length - _cursor);
+    return Token(input.substring(_cursor), 'INVALID_TOKEN', _cursor,
+        input.length - _cursor);
   }
 }
