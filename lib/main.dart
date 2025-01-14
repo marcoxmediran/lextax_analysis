@@ -20,10 +20,13 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
         useMaterial3: true,
-        textTheme: GoogleFonts.jetBrainsMonoTextTheme(),
+        textTheme: GoogleFonts.jetBrainsMonoTextTheme().copyWith(
+          bodyMedium: GoogleFonts.jetBrainsMono(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
       home: const HomePage(),
     );
   }
 }
-
