@@ -1,16 +1,18 @@
 # lextax_analysis
+This repository contains the source code responsible for tokenizing and parsing the xbox programming language.
+![interface-screenshot](images/interface_screenshot0.png)
+## Test On Your Own
+```bash
+# Clone the repository and fetch project dependencies
+git clone https://github.com/Group1-PPL-31N-2425/lextax_analysis.git
+cd lextax_analysis
+flutter pub get
 
-A new Flutter project.
-
-## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+# Test the web app
+flutter run -d chrome   # use "-d web-server" if you want to use a different browser
+```
+## Building for Deployment
+```bash
+export REPO_NAME="GITHUB_REPOSITORY_NAME"
+flutter build web --base-href=$REPO_NAME
+```
