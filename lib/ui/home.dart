@@ -32,7 +32,12 @@ class _HomePageState extends State<HomePage> {
           continue;
         }
         _tokenRows.add(DataRow(cells: [
-          DataCell(Text(token.value)),
+          DataCell(
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 250),
+              child: Text(token.value),
+            ),
+          ),
           DataCell(Text(token.type)),
         ]));
       }
@@ -199,6 +204,7 @@ class _HomePageState extends State<HomePage> {
                                 SingleChildScrollView(
                                   scrollDirection: Axis.horizontal,
                                   child: DataTable(
+                                    dataRowMaxHeight: double.infinity,
                                     columns: const [
                                       DataColumn(label: Text('Lexeme')),
                                       DataColumn(label: Text('Token')),
@@ -242,7 +248,7 @@ class _HomePageState extends State<HomePage> {
                         'https://github.com/Group1-PPL-31N-2425/lextax_analysis'
                       ]);
                     },
-                    icon: const Icon(Icons.code),
+                    icon: const Icon(Icons.terminal),
                   ),
                   _spawnHorizontalSpacer(4.0),
                   IconButton(
@@ -309,6 +315,12 @@ void _syntaxHighlight(List<Token> tokens, QuillController controller) {
         token.start,
         token.length,
         Style.fromJson({'color': '#df69ba'}),
+      );
+    } else if (token.type == 'INVALID_TOKEN') {
+      controller.formatTextStyle(
+        token.start,
+        token.length,
+        Style.fromJson({'color': '#f85552'}),
       );
     }
   }
