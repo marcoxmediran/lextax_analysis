@@ -18,6 +18,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final QuillController _controller = QuillController.basic();
+  final FocusNode _focusNode = FocusNode();
   final _tokenRows = <DataRow>[];
   final CsvHandler _csvHandler = CsvHandler();
 
@@ -54,7 +55,7 @@ class _HomePageState extends State<HomePage> {
       body: Row(
         children: [
           Container(
-            width: max(_getScreenWidth() * 0.3, 350),
+            width: max(_getScreenWidth() * 0.4, 350),
             decoration: BoxDecoration(color: Theme.of(context).hoverColor),
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -72,8 +73,10 @@ class _HomePageState extends State<HomePage> {
                       ),
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
-                        child: QuillEditor.basic(
+                        child: QuillEditor(
                           controller: _controller,
+                          focusNode: _focusNode,
+                          scrollController: ScrollController(),
                           configurations: const QuillEditorConfigurations(),
                         ),
                       ),
@@ -127,6 +130,13 @@ class _HomePageState extends State<HomePage> {
                                 _csvHandler.tokensToList(lexer.tokens);
                             String csv = _csvHandler.listToCsv(tokenList);
                             await _csvHandler.downloadCsv(csv);
+                          } else {
+                            const SnackBar snackbar = SnackBar(
+                              content: Text('No file detected'),
+                              behavior: SnackBarBehavior.floating,
+                            );
+                            Globals.scaffoldMessengerKey.currentState
+                                ?.showSnackBar(snackbar);
                           }
                         },
                         label: const Text('Tokenize'),
@@ -158,7 +168,10 @@ class _HomePageState extends State<HomePage> {
                 slivers: [
                   const SliverAppBar(
                     title: Center(
-                      child: Text('xbox Lexer and Parser'),
+                      child: Text(
+                        'Lexer and Parser',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
                     ),
                   ),
                   _tokenRows.isNotEmpty
@@ -195,6 +208,14 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
             ),
+          ),
+          Column(
+            children: [
+              Image(
+                image: const AssetImage('assets/xbox_logo.png'),
+                width: _getScreenWidth() * 0.10,
+              ),
+            ],
           ),
         ],
       ),

@@ -29,7 +29,7 @@ class CsvHandler {
     Uint8List csvBytes = Uint8List.fromList(utf8.encode(csv));
 
     await FileSaver.instance.saveFile(
-      name: 'token_output_${DateTime.now()}',
+      name: 'symbol_table_${DateTime.now()}',
       bytes: csvBytes,
       ext: 'csv',
       mimeType: MimeType.csv,

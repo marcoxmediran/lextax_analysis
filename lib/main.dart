@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lextax_analysis/globals.dart';
 import 'package:lextax_analysis/ui/home.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 void main() {
   runApp(const MyApp());
@@ -19,6 +20,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
         useMaterial3: true,
+        textTheme: GoogleFonts.jetBrainsMonoTextTheme(),
       ),
       home: const HomePage(),
     );

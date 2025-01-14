@@ -1,5 +1,4 @@
 Map symbolSet = {
-  '.': 'DOT_OPERATOR',
   ',': 'COMMA',
   ':': 'COLON',
   ';': 'SEMICOLON',

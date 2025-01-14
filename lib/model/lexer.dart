@@ -21,10 +21,10 @@ class Lexer {
     TokenType(RegExp(r'''^(\d\_|\d)*\d'''), 'NUMBER'),
     TokenType(
         RegExp(
-            r'''^(\+\+)|^(--)|^(\+\=)|^(-=)|^(\*=)|^(\/=)|^(%=)|^(>=)|^(<=)|^(==)|^(!=)|^(\|\|)|^(&&)'''),
+            r'''^(\+\+)|^(--)|^(\+\=)|^(-=)|^(\*=)|^(\/=)|^(%=)|^(\^=)|^(>=)|^(<=)|^(==)|^(!=)|^(\|\|)|^(&&)'''),
         'OPERATOR'),
-    TokenType(RegExp(r'''^[\+\-\\*/=<>!%]'''), 'OPERATOR'),
-    TokenType(RegExp(r'''^[.,:;(){}\[\]]'''), 'SYMBOL'),
+    TokenType(RegExp(r'''^[\+\-\\*\^/=<>!%]'''), 'OPERATOR'),
+    TokenType(RegExp(r'''^[,:;(){}\[\]]'''), 'SYMBOL'),
   ];
 
   Lexer(this.input);
