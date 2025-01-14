@@ -65,7 +65,7 @@ class _HomePageState extends State<HomePage> {
       body: Row(
         children: [
           Container(
-            width: max(_getScreenWidth() * 0.4, 350),
+            width: max(_getScreenWidth() * 0.4, 400),
             decoration: BoxDecoration(color: Theme.of(context).hoverColor),
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -127,6 +127,10 @@ class _HomePageState extends State<HomePage> {
                         },
                         icon: const Icon(Icons.upload_outlined),
                         tooltip: 'Upload a File',
+                      ),
+                      IconButton(
+                        onPressed: () => _controller.clear(),
+                        icon: const Icon(Icons.backspace),
                       ),
                       const Spacer(),
                       FilledButton.icon(
