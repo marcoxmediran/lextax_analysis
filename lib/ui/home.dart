@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'dart:convert';
+import 'dart:js' as js;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
@@ -21,11 +22,15 @@ class _HomePageState extends State<HomePage> {
   final FocusNode _focusNode = FocusNode();
   final _tokenRows = <DataRow>[];
   final CsvHandler _csvHandler = CsvHandler();
+  bool _autosave = true;
 
   void _populateTokens(List<Token> tokens) {
     setState(() {
       _clearTokens();
       for (var token in tokens) {
+        if (token.type == 'COMMENT') {
+          continue;
+        }
         _tokenRows.add(DataRow(cells: [
           DataCell(Text(token.value)),
           DataCell(Text(token.type)),
@@ -107,7 +112,7 @@ class _HomePageState extends State<HomePage> {
                               });
                             } else {
                               const SnackBar snackbar = SnackBar(
-                                content: Text('Invalid file extension'),
+                                content: Text('Invalid file extension.'),
                                 behavior: SnackBarBehavior.floating,
                               );
                               Globals.scaffoldMessengerKey.currentState
@@ -126,13 +131,16 @@ class _HomePageState extends State<HomePage> {
                           lexer.tokenize();
                           if (lexer.tokens.isNotEmpty) {
                             _populateTokens(lexer.tokens);
-                            List<List<String>> tokenList =
-                                _csvHandler.tokensToList(lexer.tokens);
-                            String csv = _csvHandler.listToCsv(tokenList);
-                            await _csvHandler.downloadCsv(csv);
+                            _syntaxHighlight(lexer.tokens, _controller);
+                            if (_autosave) {
+                              List<List<String>> tokenList =
+                                  _csvHandler.tokensToList(lexer.tokens);
+                              String csv = _csvHandler.listToCsv(tokenList);
+                              await _csvHandler.downloadCsv(csv);
+                            }
                           } else {
                             const SnackBar snackbar = SnackBar(
-                              content: Text('No file detected'),
+                              content: Text('No file detected.'),
                               behavior: SnackBarBehavior.floating,
                             );
                             Globals.scaffoldMessengerKey.currentState
@@ -148,7 +156,14 @@ class _HomePageState extends State<HomePage> {
                       ),
                       _spawnHorizontalSpacer(16.0),
                       FilledButton.icon(
-                        onPressed: () {},
+                        onPressed: () {
+                          const SnackBar snackbar = SnackBar(
+                            content: Text('Feature not yet implemented.'),
+                            behavior: SnackBarBehavior.floating,
+                          );
+                          Globals.scaffoldMessengerKey.currentState
+                              ?.showSnackBar(snackbar);
+                        },
                         label: const Text('Analyze'),
                         icon: const Icon(Icons.code_outlined),
                         style: FilledButton.styleFrom(
@@ -167,6 +182,7 @@ class _HomePageState extends State<HomePage> {
               body: CustomScrollView(
                 slivers: [
                   const SliverAppBar(
+                    pinned: true,
                     title: Center(
                       child: Text(
                         'Lexer and Parser',
@@ -215,11 +231,86 @@ class _HomePageState extends State<HomePage> {
                 image: const AssetImage('assets/xbox_logo.png'),
                 width: _getScreenWidth() * 0.10,
               ),
+              _spawnVerticalSpacer(4.0),
+              const Text('Source Code'),
+              _spawnVerticalSpacer(4.0),
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: () {
+                      js.context.callMethod('open', [
+                        'https://github.com/Group1-PPL-31N-2425/lextax_analysis'
+                      ]);
+                    },
+                    icon: const Icon(Icons.code),
+                  ),
+                  _spawnHorizontalSpacer(4.0),
+                  IconButton(
+                    onPressed: () {
+                      js.context.callMethod('open', [
+                        'https://github.com/Group1-PPL-31N-2425/lextax_analysis_web'
+                      ]);
+                    },
+                    icon: const Icon(Icons.html),
+                  ),
+                ],
+              ),
+              const Spacer(),
+              Padding(
+                padding: const EdgeInsets.only(right: 16.0),
+                child: Row(
+                  children: [
+                    Switch(
+                      value: _autosave,
+                      onChanged: (bool value) {
+                        setState(
+                          () {
+                            _autosave = value;
+                          },
+                        );
+                      },
+                    ),
+                    _spawnHorizontalSpacer(4.0),
+                    const Text('Save as .csv'),
+                  ],
+                ),
+              ),
+              _spawnVerticalSpacer(12.0),
             ],
           ),
         ],
       ),
     );
+  }
+}
+
+void _syntaxHighlight(List<Token> tokens, QuillController controller) {
+  for (Token token in tokens) {
+    if (token.type == 'STRING') {
+      controller.formatTextStyle(
+        token.start,
+        token.length,
+        Style.fromJson({'color': '#35a77c'}),
+      );
+    } else if (token.type == 'COMMENT') {
+      controller.formatTextStyle(
+        token.start,
+        token.length,
+        Style.fromJson({'color': '#708089'}),
+      );
+    } else if (token.type.contains('TYPE')) {
+      controller.formatTextStyle(
+        token.start,
+        token.length,
+        Style.fromJson({'color': '#dfa000'}),
+      );
+    } else if (token.type == 'MAIN_KEYWORD' || token.type == 'IDENTIFIER') {
+      controller.formatTextStyle(
+        token.start,
+        token.length,
+        Style.fromJson({'color': '#df69ba'}),
+      );
+    }
   }
 }
 
