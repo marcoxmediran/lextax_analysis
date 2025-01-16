@@ -28,9 +28,6 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       _clearTokens();
       for (var token in tokens) {
-        if (token.type == 'COMMENT') {
-          continue;
-        }
         _tokenRows.add(DataRow(cells: [
           DataCell(
             ConstrainedBox(
