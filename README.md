@@ -4,7 +4,7 @@ This repository contains the source code responsible for tokenizing and parsing 
 ## Test On Your Own
 ```bash
 # Clone the repository and fetch project dependencies
-git clone https://github.com/Group1-PPL-31N-2425/lextax_analysis.git
+git clone https://github.com/marcoxmediran/lextax_analysis.git
 cd lextax_analysis
 flutter pub get
 

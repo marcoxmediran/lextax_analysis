@@ -246,7 +246,7 @@ class _HomePageState extends State<HomePage> {
                   IconButton(
                     onPressed: () {
                       js.context.callMethod('open', [
-                        'https://github.com/Group1-PPL-31N-2425/lextax_analysis'
+                        'https://github.com/marcoxmediran/lextax_analysis'
                       ]);
                     },
                     icon: const Icon(Icons.terminal),
@@ -255,7 +255,7 @@ class _HomePageState extends State<HomePage> {
                   IconButton(
                     onPressed: () {
                       js.context.callMethod('open', [
-                        'https://github.com/Group1-PPL-31N-2425/lextax_analysis_web'
+                        'https://github.com/marcoxmediran/lextax_analysis_web'
                       ]);
                     },
                     icon: const Icon(Icons.html),
