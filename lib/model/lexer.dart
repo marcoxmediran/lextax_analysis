@@ -40,7 +40,7 @@ class Lexer {
       if (token.type == 'INVALID_TOKEN') {
         tokens.add(token);
         return;
-      } else if (token.type == 'WHITESPACE') {
+      } else if (token.type == 'WHITESPACE' || token.type == 'COMMENT') {
         continue;
       } else {
         if (token.type == 'STRING' && tokens.length >= 4) {

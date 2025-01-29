@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:lextax_analysis/model/lexer.dart';
+import 'package:lextax_analysis/model/parser.dart';
+import 'package:lextax_analysis/model/parser_old.dart';
 import 'package:lextax_analysis/model/token.dart';
 import 'package:lextax_analysis/globals.dart';
 import 'package:lextax_analysis/model/csv_handler.dart';
@@ -22,7 +24,7 @@ class _HomePageState extends State<HomePage> {
   final FocusNode _focusNode = FocusNode();
   final _tokenRows = <DataRow>[];
   final CsvHandler _csvHandler = CsvHandler();
-  bool _autosave = true;
+  bool _autosave = false;
 
   void _populateTokens(List<Token> tokens) {
     setState(() {
@@ -162,13 +164,43 @@ class _HomePageState extends State<HomePage> {
                       ),
                       _spawnHorizontalSpacer(16.0),
                       FilledButton.icon(
-                        onPressed: () {
-                          const SnackBar snackbar = SnackBar(
-                            content: Text('Feature not yet implemented.'),
-                            behavior: SnackBarBehavior.floating,
-                          );
-                          Globals.scaffoldMessengerKey.currentState
-                              ?.showSnackBar(snackbar);
+                        onPressed: () async {
+                          Lexer lexer =
+                              Lexer(_controller.document.toPlainText());
+                          lexer.tokenize();
+                          if (lexer.tokens.isNotEmpty) {
+                            _populateTokens(lexer.tokens);
+                            _syntaxHighlight(lexer.tokens, _controller);
+                            if (lexer.tokens.last.type == 'INVALID_TOKEN') {
+                              const SnackBar snackbar = SnackBar(
+                                content: Text(
+                                    'INVALID_TOKEN detected. Fix program before parsing.'),
+                                behavior: SnackBarBehavior.floating,
+                              );
+                              Globals.scaffoldMessengerKey.currentState
+                                  ?.showSnackBar(snackbar);
+                              return;
+                            }
+                            try {
+                              Parser parser = Parser(lexer.tokens);
+                              parser.parse();
+                            } on Exception catch (e) {
+                              print(e);
+                            }
+                            if (_autosave) {
+                              List<List<String>> tokenList =
+                                  _csvHandler.tokensToList(lexer.tokens);
+                              String csv = _csvHandler.listToCsv(tokenList);
+                              await _csvHandler.downloadCsv(csv);
+                            }
+                          } else {
+                            const SnackBar snackbar = SnackBar(
+                              content: Text('No file detected.'),
+                              behavior: SnackBarBehavior.floating,
+                            );
+                            Globals.scaffoldMessengerKey.currentState
+                                ?.showSnackBar(snackbar);
+                          }
                         },
                         label: const Text('Analyze'),
                         icon: const Icon(Icons.code_outlined),
@@ -245,9 +277,8 @@ class _HomePageState extends State<HomePage> {
                 children: [
                   IconButton(
                     onPressed: () {
-                      js.context.callMethod('open', [
-                        'https://github.com/marcoxmediran/lextax_analysis'
-                      ]);
+                      js.context.callMethod('open',
+                          ['https://github.com/marcoxmediran/lextax_analysis']);
                     },
                     icon: const Icon(Icons.terminal),
                   ),
@@ -322,6 +353,12 @@ void _syntaxHighlight(List<Token> tokens, QuillController controller) {
         token.start,
         token.length,
         Style.fromJson({'color': '#f85552'}),
+      );
+    } else {
+      controller.formatTextStyle(
+        token.start,
+        token.length,
+        Style.fromJson({'color': '#000000'}),
       );
     }
   }
