@@ -3,8 +3,10 @@ import 'dart:convert';
 import 'dart:js' as js;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_quill/flutter_quill.dart';
+import 'package:flutter_code_editor/flutter_code_editor.dart';
+import 'package:flutter_highlight/themes/googlecode.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:lextax_analysis/model/lexer.dart';
 import 'package:lextax_analysis/model/parser.dart';
 import 'package:lextax_analysis/model/token.dart';
@@ -19,7 +21,13 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final QuillController _controller = QuillController.basic();
+  final CodeController _codeController = CodeController(
+    text: '''
+gui main() {
+  print('hello, xbox!\\n');
+}
+''',
+  );
   final FocusNode _focusNode = FocusNode();
   final _tokenRows = <DataRow>[];
   final CsvHandler _csvHandler = CsvHandler();
@@ -50,20 +58,19 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
-    _controller.dispose();
+    _codeController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    double _getScreenWidth() => MediaQuery.sizeOf(context).width;
-    double _getScreenHeight() => MediaQuery.sizeOf(context).height;
+    double getScreenWidth() => MediaQuery.sizeOf(context).width;
 
     return Scaffold(
       body: Row(
         children: [
           Container(
-            width: max(_getScreenWidth() * 0.4, 400),
+            width: max(getScreenWidth() * 0.45, 400),
             decoration: BoxDecoration(color: Theme.of(context).hoverColor),
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -72,20 +79,16 @@ class _HomePageState extends State<HomePage> {
                   const Text('Edit your code here'),
                   _spawnVerticalSpacer(16.0),
                   Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10.0),
-                        border: Border.all(
-                          width: 0.2,
-                        ),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: QuillEditor(
-                          controller: _controller,
-                          focusNode: _focusNode,
-                          scrollController: ScrollController(),
-                          configurations: const QuillEditorConfigurations(),
+                    child: CodeTheme(
+                      data: CodeThemeData(styles: googlecodeTheme),
+                      child: SingleChildScrollView(
+                        child: CodeField(
+                          background: Colors.transparent,
+                          controller: _codeController,
+                          textStyle: GoogleFonts.jetBrainsMono(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15.0,
+                          ),
                         ),
                       ),
                     ),
@@ -109,9 +112,7 @@ class _HomePageState extends State<HomePage> {
                                 file.name.substring(file.name.length - 4);
                             if (fileExtension == 'xbox') {
                               setState(() {
-                                _controller.document
-                                    .delete(0, _controller.document.length);
-                                _controller.document.insert(0, input);
+                                _codeController.text = input;
                               });
                             } else {
                               const SnackBar snackbar = SnackBar(
@@ -127,18 +128,16 @@ class _HomePageState extends State<HomePage> {
                         tooltip: 'Upload a File',
                       ),
                       IconButton(
-                        onPressed: () => _controller.clear(),
+                        onPressed: () => _codeController.clear(),
                         icon: const Icon(Icons.backspace),
                       ),
                       const Spacer(),
                       FilledButton.icon(
                         onPressed: () async {
-                          Lexer lexer =
-                              Lexer(_controller.document.toPlainText());
+                          Lexer lexer = Lexer(_codeController.text);
                           lexer.tokenize();
                           if (lexer.tokens.isNotEmpty) {
                             _populateTokens(lexer.tokens);
-                            _syntaxHighlight(lexer.tokens, _controller);
                             if (_autosave) {
                               List<List<String>> tokenList =
                                   _csvHandler.tokensToList(lexer.tokens);
@@ -164,12 +163,10 @@ class _HomePageState extends State<HomePage> {
                       _spawnHorizontalSpacer(16.0),
                       FilledButton.icon(
                         onPressed: () async {
-                          Lexer lexer =
-                              Lexer(_controller.document.toPlainText());
+                          Lexer lexer = Lexer(_codeController.text);
                           lexer.tokenize();
                           if (lexer.tokens.isNotEmpty) {
                             _populateTokens(lexer.tokens);
-                            _syntaxHighlight(lexer.tokens, _controller);
                             if (lexer.tokens.last.type == 'INVALID_TOKEN') {
                               const SnackBar snackbar = SnackBar(
                                 content: Text(
@@ -263,7 +260,7 @@ class _HomePageState extends State<HomePage> {
             children: [
               Image(
                 image: const AssetImage('assets/xbox_logo.png'),
-                width: _getScreenWidth() * 0.10,
+                width: getScreenWidth() * 0.10,
               ),
               _spawnVerticalSpacer(4.0),
               const Text('Source Code'),
@@ -314,48 +311,6 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
     );
-  }
-}
-
-void _syntaxHighlight(List<Token> tokens, QuillController controller) {
-  for (Token token in tokens) {
-    if (token.type == 'STRING') {
-      controller.formatTextStyle(
-        token.start,
-        token.length,
-        Style.fromJson({'color': '#35a77c'}),
-      );
-    } else if (token.type == 'COMMENT') {
-      controller.formatTextStyle(
-        token.start,
-        token.length,
-        Style.fromJson({'color': '#708089'}),
-      );
-    } else if (token.type.contains('TYPE')) {
-      controller.formatTextStyle(
-        token.start,
-        token.length,
-        Style.fromJson({'color': '#dfa000'}),
-      );
-    } else if (token.type == 'MAIN_KEYWORD' || token.type == 'IDENTIFIER') {
-      controller.formatTextStyle(
-        token.start,
-        token.length,
-        Style.fromJson({'color': '#df69ba'}),
-      );
-    } else if (token.type == 'INVALID_TOKEN') {
-      controller.formatTextStyle(
-        token.start,
-        token.length,
-        Style.fromJson({'color': '#f85552'}),
-      );
-    } else {
-      controller.formatTextStyle(
-        token.start,
-        token.length,
-        Style.fromJson({'color': '#000000'}),
-      );
-    }
   }
 }
 
