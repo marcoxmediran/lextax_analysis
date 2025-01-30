@@ -8,6 +8,7 @@ import 'package:lextax_analysis/model/operator_definition.dart';
 class Lexer {
   final String input;
   int _cursor = 0;
+  int _line = 1;
   final tokens = <Token>[];
 
   // Matchers
@@ -41,6 +42,7 @@ class Lexer {
         tokens.add(token);
         return;
       } else if (token.type == 'WHITESPACE' || token.type == 'COMMENT') {
+        _line += _countLines(token.value);
         continue;
       } else {
         if (token.type == 'STRING' && tokens.length >= 4) {
@@ -66,7 +68,7 @@ class Lexer {
         String? value = match[0];
         _cursor += value!.length;
         Token token = Token(
-            value, _tokenTypes[i].type, _cursor - value.length, value.length);
+            value, _tokenTypes[i].type, _line, _cursor - value.length, value.length);
         if (token.type == 'WORD') {
           if (keywordSet.containsKey(token.value)) {
             token.type = keywordSet[token.value]!;
@@ -82,7 +84,11 @@ class Lexer {
       }
     }
 
-    return Token(input.substring(_cursor), 'INVALID_TOKEN', _cursor,
+    return Token(input.substring(_cursor), 'INVALID_TOKEN', _line, _cursor,
         input.length - _cursor);
+  }
+
+  int _countLines(String text) {
+    return text.split('\n').length - 1;
   }
 }
