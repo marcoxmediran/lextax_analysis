@@ -2,13 +2,12 @@ class Token {
   String value;
   String type;
   int line;
-  int start;
-  int length;
+  int col;
 
-  Token(this.value, this.type, this.line, this.start, this.length);
+  Token(this.value, this.type, this.line, this.col);
 
   @override
   String toString() {
-    return "Token(value: $value, type: $type, line: $line, start: $start, length: $length)";
+    return "Token(value: $value, type: $type, line: $line, col: $col)";
   }
 }

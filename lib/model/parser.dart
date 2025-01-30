@@ -41,7 +41,7 @@ class Parser {
     if (_check(type)) {
       return _advance();
     }
-    throw Exception('Error at ${_peek.type}: $message');
+    throw Exception('[Error at line ${_previous.line}:${_previous.col}] $message');
   }
 
   void parse() {

@@ -8,6 +8,7 @@ import 'package:lextax_analysis/model/operator_definition.dart';
 class Lexer {
   final String input;
   int _cursor = 0;
+  int _col = 0;
   int _line = 1;
   final tokens = <Token>[];
 
@@ -42,7 +43,6 @@ class Lexer {
         tokens.add(token);
         return;
       } else if (token.type == 'WHITESPACE' || token.type == 'COMMENT') {
-        _line += _countLines(token.value);
         continue;
       } else {
         if (token.type == 'STRING' && tokens.length >= 4) {
@@ -67,8 +67,8 @@ class Lexer {
       if (match != null) {
         String? value = match[0];
         _cursor += value!.length;
-        Token token = Token(
-            value, _tokenTypes[i].type, _line, _cursor - value.length, value.length);
+        _updateCount(value);
+        Token token = Token(value, _tokenTypes[i].type, _line, _col);
         if (token.type == 'WORD') {
           if (keywordSet.containsKey(token.value)) {
             token.type = keywordSet[token.value]!;
@@ -84,11 +84,22 @@ class Lexer {
       }
     }
 
-    return Token(input.substring(_cursor), 'INVALID_TOKEN', _line, _cursor,
-        input.length - _cursor);
+    return Token(
+      input.substring(_cursor),
+      'INVALID_TOKEN',
+      _line,
+      _col,
+    );
   }
 
-  int _countLines(String text) {
-    return text.split('\n').length - 1;
+  void _updateCount(String text) {
+    for (int i = 0; i < text.length; i++) {
+      if (text[i] == '\n') {
+        _line++;
+        _col = 0;
+      } else {
+        _col++;
+      }
+    }
   }
 }

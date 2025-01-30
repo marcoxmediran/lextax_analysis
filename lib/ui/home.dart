@@ -21,14 +21,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final CodeController _codeController = CodeController(
-    text: '''
-gui main() {
-  print('hello, xbox!\\n');
-}
-''',
-  );
-  final FocusNode _focusNode = FocusNode();
+  final CodeController _codeController =
+      CodeController(text: 'gui main() {\n\tprint("hello, xbox!\\n");\n}');
   final _tokenRows = <DataRow>[];
   final CsvHandler _csvHandler = CsvHandler();
   bool _autosave = false;
@@ -85,6 +79,12 @@ gui main() {
                         child: CodeField(
                           background: Colors.transparent,
                           controller: _codeController,
+                          gutterStyle: GutterStyle(
+                            textStyle: GoogleFonts.jetBrainsMono(
+                              fontSize: 16.0,
+                              height: 1.5,
+                            ),
+                          ),
                           textStyle: GoogleFonts.jetBrainsMono(
                             fontWeight: FontWeight.w600,
                             fontSize: 15.0,
@@ -134,7 +134,7 @@ gui main() {
                       const Spacer(),
                       FilledButton.icon(
                         onPressed: () async {
-                          Lexer lexer = Lexer(_codeController.text);
+                          Lexer lexer = Lexer(_codeController.fullText);
                           lexer.tokenize();
                           if (lexer.tokens.isNotEmpty) {
                             _populateTokens(lexer.tokens);
@@ -163,14 +163,16 @@ gui main() {
                       _spawnHorizontalSpacer(16.0),
                       FilledButton.icon(
                         onPressed: () async {
-                          Lexer lexer = Lexer(_codeController.text);
+                          Lexer lexer = Lexer(_codeController.fullText);
                           lexer.tokenize();
                           if (lexer.tokens.isNotEmpty) {
                             _populateTokens(lexer.tokens);
                             if (lexer.tokens.last.type == 'INVALID_TOKEN') {
-                              const SnackBar snackbar = SnackBar(
+                              Token invalid = lexer.tokens.last;
+                              SnackBar snackbar = SnackBar(
                                 content: Text(
-                                    'INVALID_TOKEN detected. Fix program before parsing.'),
+                                  'INVALID_TOKEN detected at line ${invalid.line}:${invalid.col}. Fix program before parsing.',
+                                ),
                                 behavior: SnackBarBehavior.floating,
                               );
                               Globals.scaffoldMessengerKey.currentState
@@ -231,8 +233,16 @@ gui main() {
                                   child: DataTable(
                                     dataRowMaxHeight: double.infinity,
                                     columns: const [
-                                      DataColumn(label: Text('Lexeme')),
-                                      DataColumn(label: Text('Token')),
+                                      DataColumn(
+                                        label: Text('Lexeme'),
+                                        headingRowAlignment:
+                                            MainAxisAlignment.center,
+                                      ),
+                                      DataColumn(
+                                        label: Text('Token'),
+                                        headingRowAlignment:
+                                            MainAxisAlignment.center,
+                                      ),
                                     ],
                                     rows: _tokenRows,
                                   ),
