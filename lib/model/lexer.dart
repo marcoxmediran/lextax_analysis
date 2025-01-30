@@ -46,9 +46,9 @@ class Lexer {
         if (token.type == 'STRING' && tokens.length >= 4) {
           int latestIndex = tokens.length - 1;
           if (tokens[latestIndex].type == 'COLON' &&
-              tokens[latestIndex - 1].type == 'VALUE_RESWORD' &&
+              tokens[latestIndex - 1].type == 'VALUE' &&
               tokens[latestIndex - 2].type == 'LEFT_PAREN' &&
-              tokens[latestIndex - 3].type == 'PURIFY_DEV_RESWORD') {
+              tokens[latestIndex - 3].type == 'PURIFY_DEV') {
             token.value = sanitizeHtml(token.value);
           }
         }

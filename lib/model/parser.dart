@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+import 'package:lextax_analysis/globals.dart';
 import 'package:lextax_analysis/model/token.dart';
 
 class Parser {
@@ -45,9 +47,17 @@ class Parser {
   void parse() {
     try {
       _program();
-      print('Parsing completed');
+      const SnackBar snackbar = SnackBar(
+        content: Text('Parsing completed. No errors generated.'),
+        behavior: SnackBarBehavior.floating,
+      );
+      Globals.scaffoldMessengerKey.currentState?.showSnackBar(snackbar);
     } catch (e) {
-      print('Parsing failed: $e');
+      SnackBar snackbar = SnackBar(
+        content: Text(e.toString()),
+        behavior: SnackBarBehavior.floating,
+      );
+      Globals.scaffoldMessengerKey.currentState?.showSnackBar(snackbar);
     }
   }
 
@@ -56,15 +66,15 @@ class Parser {
   }
 
   void _mainFunction() {
-    //_consume('GUI', 'Expected "gui"');
-    //_consume('MAIN', 'Expected "main"');
-    //_consume('LEFT_PAREN', 'Expected "("');
-    //_consume('RIGHT_PAREN', 'Expected ")"');
-    //_consume('LEFT_BRACE', 'Expected "{"');
+    _consume('GUI', 'Expected "gui:');
+    _consume('MAIN', 'Expected "main"');
+    _consume('LEFT_PAREN', 'Expected "("');
+    _consume('RIGHT_PAREN', 'Expected ")"');
+    _consume('LEFT_BRACE', 'Expected "{"');
     while (!_check('RIGHT_BRACE') && !_isAtEnd()) {
       _statement();
     }
-    //_consume('RIGHT_BRACE', 'Expected "}"');
+    _consume('RIGHT_BRACE', 'Expected "}"');
   }
 
   void _statement() {
@@ -220,6 +230,12 @@ class Parser {
     } else if (_match(['LEFT_PAREN'])) {
       _expression();
       _consume('RIGHT_PAREN', 'Expected ")"');
+    } else if (_match(['PURIFY_DEV'])) {
+      _consume('LEFT_PAREN', 'Expected "("');
+      _consume('VALUE', 'Expected "value"');
+      _consume('COLON', 'Expected ":"');
+      _expression();
+      _consume('RIGHT_PAREN', 'Expected ")"');
     } else {
       throw Exception('Invalid primary expression');
     }
@@ -288,16 +304,86 @@ class Parser {
     _consume('CONTENTS', 'Expected "contents"');
     _consume('COLON', 'Expected ":"');
     _consume('LEFT_BRACKET', 'Expected "["');
+    while (!_check('RIGHT_BRACKET') && !_isAtEnd()) {
+      _contents();
+    }
     _consume('RIGHT_BRACKET', 'Expected "]"');
     _consume('RIGHT_PAREN', 'Expected ")"');
     _consume('SEMICOLON', 'Expected ";"');
   }
 
-  void _argumentList() {
-    _expression();
+  void _contents() {
+    _component();
     while (_check('COMMA')) {
       _advance();
-      _expression();
+      _component();
     }
+  }
+
+  void _component() {
+    if (_match(['ROW', 'COLUMN'])) {
+      _rowOrCol();
+    } else if (_check('BUTTON')) {
+      _button();
+    } else if (_check('FIELD')) {
+      _field();
+    } else if (_check('TEXT')) {
+      _text();
+    } else {
+      throw Exception('Unrecognized GUI Component');
+    }
+  }
+
+  void _rowOrCol() {
+    _consume('LEFT_PAREN', 'Expected "("');
+    _consume('CONTENTS', 'Expected "contents"');
+    _consume('COLON', 'Expected ":"');
+    _consume('LEFT_BRACKET', 'Expected "["');
+    while (!_check('RIGHT_BRACKET') && !_isAtEnd()) {
+      _contents();
+    }
+    _consume('RIGHT_BRACKET', 'Expected "]"');
+    _consume('RIGHT_PAREN', 'Expected ")"');
+  }
+
+  void _button() {
+    _advance();
+    _consume('LEFT_PAREN', 'Expected "("');
+    _consume('ACTION', 'Expected "action"');
+    _consume('COLON', 'Expected ":"');
+    _consume('LEFT_PAREN', 'Expected "("');
+    _consume('RIGHT_PAREN', 'Expected ")"');
+    _consume('LEFT_BRACE', 'Expected "{"');
+    while (!_check('RIGHT_BRACE') && !_isAtEnd()) {
+      _statement();
+    }
+    _consume('RIGHT_BRACE', 'Expected "}"');
+    _consume('COMMA', 'Expected ","');
+    _consume('LABEL', 'Expected "label"');
+    _consume('COLON', 'Expected ":"');
+    if (!_match(['STRING', 'IDENTIFIER'])) {
+      throw Exception('Expected STRING or IDENTIFIER');
+    }
+    _consume('RIGHT_PAREN', 'Expected ")"');
+  }
+
+  void _field() {
+    _advance();
+    _consume('LEFT_PAREN', 'Expected "("');
+    _consume('VALUE', 'Expected "value"');
+    _consume('COLON', 'Expected ":"');
+    _consume('IDENTIFIER', 'Expected IDENTIFIER');
+    _consume('RIGHT_PAREN', 'Expected ")"');
+  }
+
+  void _text() {
+    _advance();
+    _consume('LEFT_PAREN', 'Expected "("');
+    _consume('LABEL', 'Expected "label"');
+    _consume('COLON', 'Expected ":"');
+    if (!_match(['STRING', 'IDENTIFIER'])) {
+      throw Exception('Expected STRING or IDENTIFIER');
+    }
+    _consume('RIGHT_PAREN', 'Expected ")"');
   }
 }

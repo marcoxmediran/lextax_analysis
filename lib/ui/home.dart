@@ -7,7 +7,6 @@ import 'package:flutter_quill/flutter_quill.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:lextax_analysis/model/lexer.dart';
 import 'package:lextax_analysis/model/parser.dart';
-import 'package:lextax_analysis/model/parser_old.dart';
 import 'package:lextax_analysis/model/token.dart';
 import 'package:lextax_analysis/globals.dart';
 import 'package:lextax_analysis/model/csv_handler.dart';
@@ -181,12 +180,8 @@ class _HomePageState extends State<HomePage> {
                                   ?.showSnackBar(snackbar);
                               return;
                             }
-                            try {
-                              Parser parser = Parser(lexer.tokens);
-                              parser.parse();
-                            } on Exception catch (e) {
-                              print(e);
-                            }
+                            Parser parser = Parser(lexer.tokens);
+                            parser.parse();
                             if (_autosave) {
                               List<List<String>> tokenList =
                                   _csvHandler.tokensToList(lexer.tokens);
