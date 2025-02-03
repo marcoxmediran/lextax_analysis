@@ -79,6 +79,21 @@ class PrintNode extends StatementNode {
   }
 }
 
+class ErrorNode extends StatementNode {
+  final int line;
+  final int col;
+  ErrorNode(this.line, this.col);
+
+  @override
+  Map<String, dynamic> toJson() {
+    return {
+      'type': 'ErrorNode',
+      'line': line,
+      'col': col
+    };
+  }
+}
+
 class InputNode extends ExpressionNode {
   InputNode();
   @override

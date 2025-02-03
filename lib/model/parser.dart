@@ -4,6 +4,7 @@ import 'package:lextax_analysis/model/ast.dart';
 
 class Parser {
   final List<Token> tokens;
+  final List<String> _errors = [];
   int _current = 0;
 
   Parser(this.tokens);
@@ -41,19 +42,75 @@ class Parser {
     if (_check(type)) {
       return _advance();
     }
-    throw Exception(
-        '[${_previous.line}:${_previous.col}] ERROR: $message after "${_previous.value}".');
+    _errors
+        .add('${_lineDetails()} [ERROR]: $message after "${_previous.value}".');
+
+    return _previous;
+  }
+
+  void _synchronize() {
+    _advance();
+    const List<String> syncTokens = [
+      'TYPE',
+      'IDENTIFIER',
+      'PRINT',
+      'IF',
+      'FOR',
+      'WHILE',
+      'ISS',
+      'RETURN',
+      'ROW',
+      'COLUMN',
+      'BUTTON'
+          'FIELD',
+      'TEXT'
+          'SEMICOLON',
+    ];
+
+    while (!_isAtEnd()) {
+      if (_previous.type == 'SEMICOLON') {
+        return;
+      }
+
+      if (syncTokens.contains(_peek.type)) {
+        return;
+      }
+
+      _advance();
+    }
+  }
+
+  String _lineDetails() {
+    return '[${_previous.line}:${_previous.col}]';
+  }
+
+  String _formatError(String e) {
+    return e.substring(10);
+  }
+
+  void _addError(String e) {
+    _errors.add(_formatError(e));
+    _synchronize();
   }
 
   ProgramNode? parse() {
+    ProgramNode? program;
     try {
-      ProgramNode program = _program();
-      Globals.snackBarNotif('Parsing completed. No Errors generated.');
-      return program;
+      program = _program();
     } catch (e) {
-      Globals.snackBarNotif(e.toString().substring(10));
+      _errors.add(_formatError(e.toString()));
     }
-    return null;
+    if (_errors.isEmpty) {
+      Globals.snackBarNotif('Parsing completed. No errors generated.');
+    } else {
+      String errorMessage =
+          'Parsing completed. Generated ${_errors.length} error(s):';
+      for (var error in _errors) {
+        errorMessage += '\n$error';
+      }
+      Globals.snackBarNotif(errorMessage);
+    }
+    return program;
   }
 
   ProgramNode _program() {
@@ -67,84 +124,114 @@ class Parser {
   }
 
   StatementNode _statement() {
-    if (_check('TYPE')) {
-      return _variableDeclaration();
-    } else if (_check('IDENTIFIER')) {
-      return _assignment(isInside: false);
-    } else if (_check('PRINT')) {
-      return _printStatement();
-    } else if (_check('IF')) {
-      return _ifStatement();
-    } else if (_check('FOR')) {
-      return _forLoop();
-    } else if (_check('WHILE')) {
-      return _whileLoop();
-    } else if (_check('ISS')) {
-      return _issStatement();
-    } else if (_check('RETURN')) {
-      return _returnGui();
-    } else {
-      throw Exception(
-          '[${_peek.line}:${_peek.col}] ERROR: Unexpected token: ${_peek.value}');
+    try {
+      if (_check('TYPE')) {
+        return _variableDeclaration();
+      } else if (_check('IDENTIFIER')) {
+        return _assignment(isInside: false);
+      } else if (_check('PRINT')) {
+        return _printStatement();
+      } else if (_check('IF')) {
+        return _ifStatement();
+      } else if (_check('FOR')) {
+        return _forLoop();
+      } else if (_check('WHILE')) {
+        return _whileLoop();
+      } else if (_check('ISS')) {
+        return _issStatement();
+      } else if (_check('RETURN')) {
+        return _returnGui();
+      } else {
+        throw Exception(
+            '${_lineDetails()} ERROR: Unexpected token: ${_peek.value}');
+      }
+    } catch (e) {
+      _addError(e.toString());
+      return ErrorNode(_peek.line, _peek.col);
     }
   }
 
   VariableDeclarationNode _variableDeclaration() {
-    String type = _advance().value;
-    Token identifier = _consume('IDENTIFIER', 'Expected variable name');
-    ExpressionNode? initializer;
-    if (_match(['EQUAL'])) {
-      if (_match(['INPUT'])) {
-        return VariableDeclarationNode(
-            type, identifier.value, _inputStatement());
+    try {
+      String type = _advance().value;
+      Token identifier = _consume('IDENTIFIER', 'Expected variable name');
+      ExpressionNode? initializer;
+      if (_match(['EQUAL'])) {
+        if (_match(['INPUT'])) {
+          return VariableDeclarationNode(
+              type, identifier.value, _inputStatement());
+        }
+        initializer = _expression();
       }
-      initializer = _expression();
+      _consume('SEMICOLON', 'Expected ";"');
+      return VariableDeclarationNode(type, identifier.value, initializer);
+    } catch (e) {
+      _addError(e.toString());
+      return VariableDeclarationNode('UNKNOWN', 'UNKNOWN', null);
     }
-    _consume('SEMICOLON', 'Expected ";"');
-    return VariableDeclarationNode(type, identifier.value, initializer);
   }
 
   AssignmentNode _assignment({required bool isInside}) {
-    Token identifier = _consume('IDENTIFIER', 'Expected variable name');
-    String operator = '=';
-    if (_check('EQUAL')) {
-      _advance();
-    } else {
-      _assignOps();
-      operator = _previous.value;
+    try {
+      Token identifier = _consume('IDENTIFIER', 'Expected variable name');
+      String operator = '=';
+      if (_check('EQUAL')) {
+        _advance();
+      } else {
+        _assignOps();
+        operator = _previous.value;
+      }
+      if (_match(['INPUT'])) {
+        return AssignmentNode(identifier.value, operator, _inputStatement());
+      }
+      ExpressionNode value = _expression();
+      if (!isInside) {
+        _consume('SEMICOLON', 'Expected ";"');
+      }
+      return AssignmentNode(identifier.value, operator, value);
+    } catch (e) {
+      _addError(e.toString());
+      return AssignmentNode('UNKNOWN', 'UNKNOWN', LiteralNode(0));
     }
-    if (_match(['INPUT'])) {
-      return AssignmentNode(identifier.value, operator, _inputStatement());
-    }
-    ExpressionNode value = _expression();
-    if (!isInside) {
-      _consume('SEMICOLON', 'Expected ";"');
-    }
-    return AssignmentNode(identifier.value, operator, value);
   }
 
   PrintNode _printStatement() {
-    _advance();
-    _consume('LEFT_PAREN', 'Expected "("');
-    ExpressionNode expr = _expression();
-    _consume('RIGHT_PAREN', 'Expected ")"');
-    _consume('SEMICOLON', 'Expected ";"');
-    return PrintNode(expr);
+    try {
+      _advance();
+      _consume('LEFT_PAREN', 'Expected "("');
+      ExpressionNode expr = _expression();
+      _consume('RIGHT_PAREN', 'Expected ")"');
+      _consume('SEMICOLON', 'Expected ";"');
+      return PrintNode(expr);
+    } catch (e) {
+      _addError(e.toString());
+      return PrintNode(LiteralNode(0));
+    }
   }
 
   InputNode _inputStatement() {
-    _consume('LEFT_PAREN', 'Expected "("');
-    _consume('RIGHT_PAREN', 'Expected ")"');
-    _consume('SEMICOLON', 'Expected ";"');
-    return InputNode();
+    try {
+      _consume('LEFT_PAREN', 'Expected "("');
+      _consume('RIGHT_PAREN', 'Expected ")"');
+      _consume('SEMICOLON', 'Expected ";"');
+      return InputNode();
+    } catch (e) {
+      _addError(e.toString());
+      return InputNode();
+    }
   }
 
   IssNode _issStatement() {
-    _advance();
-    _consume('LEFT_PAREN', 'Expected "("');
-    _consume('RIGHT_PAREN', 'Expected ")"');
-    _consume('SEMICOLON', 'Expected ";"');
-    return IssNode();
+    try {
+      _advance();
+      _consume('LEFT_PAREN', 'Expected "("');
+      _consume('RIGHT_PAREN', 'Expected ")"');
+      _consume('SEMICOLON', 'Expected ";"');
+      return IssNode();
+    } catch (e) {
+      _addError(e.toString());
+      return IssNode();
+    }
   }
 
   void _assignOps() {
@@ -152,263 +239,364 @@ class Parser {
   }
 
   ExpressionNode _expression() {
-    ExpressionNode expr = _andExpr();
-    while (_match(['OR_OP'])) {
-      expr = BinaryExpressionNode(expr, _previous.value, _andExpr());
+    try {
+      ExpressionNode expr = _andExpr();
+      while (_match(['OR_OP'])) {
+        expr = BinaryExpressionNode(expr, _previous.value, _andExpr());
+      }
+      return expr;
+    } catch (e) {
+      _addError(e.toString());
+      return LiteralNode(0);
     }
-    return expr;
   }
 
   ExpressionNode _andExpr() {
-    ExpressionNode expr = _equExpr();
-    while (_match(['AND_OP'])) {
-      expr = BinaryExpressionNode(expr, _previous.value, _equExpr());
+    try {
+      ExpressionNode expr = _equExpr();
+      while (_match(['AND_OP'])) {
+        expr = BinaryExpressionNode(expr, _previous.value, _equExpr());
+      }
+      return expr;
+    } catch (e) {
+      _addError(e.toString());
+      return LiteralNode(0);
     }
-    return expr;
   }
 
   ExpressionNode _equExpr() {
-    ExpressionNode expr = _relExpr();
-    while (_match(['EQU_OP'])) {
-      expr = BinaryExpressionNode(expr, _previous.value, _relExpr());
+    try {
+      ExpressionNode expr = _relExpr();
+      while (_match(['EQU_OP'])) {
+        expr = BinaryExpressionNode(expr, _previous.value, _relExpr());
+      }
+      return expr;
+    } catch (e) {
+      _addError(e.toString());
+      return LiteralNode(0);
     }
-    return expr;
   }
 
   ExpressionNode _relExpr() {
-    ExpressionNode expr = _addExpr();
-    while (_match(['REL_OP'])) {
-      expr = BinaryExpressionNode(expr, _previous.value, _addExpr());
+    try {
+      ExpressionNode expr = _addExpr();
+      while (_match(['REL_OP'])) {
+        expr = BinaryExpressionNode(expr, _previous.value, _addExpr());
+      }
+      return expr;
+    } catch (e) {
+      _addError(e.toString());
+      return LiteralNode(0);
     }
-    return expr;
   }
 
   ExpressionNode _addExpr() {
-    ExpressionNode expr = _mulExpr();
-    while (_match(['PLUS', 'MINUS'])) {
-      expr = BinaryExpressionNode(expr, _previous.value, _mulExpr());
+    try {
+      ExpressionNode expr = _mulExpr();
+      while (_match(['PLUS', 'MINUS'])) {
+        expr = BinaryExpressionNode(expr, _previous.value, _mulExpr());
+      }
+      return expr;
+    } catch (e) {
+      _addError(e.toString());
+      return LiteralNode(0);
     }
-    return expr;
   }
 
   ExpressionNode _mulExpr() {
-    ExpressionNode expr = _unaExpr();
-    while (_match(['MUL_OP'])) {
-      expr = BinaryExpressionNode(expr, _previous.value, _unaExpr());
+    try {
+      ExpressionNode expr = _unaExpr();
+      while (_match(['MUL_OP'])) {
+        expr = BinaryExpressionNode(expr, _previous.value, _unaExpr());
+      }
+      return expr;
+    } catch (e) {
+      _addError(e.toString());
+      return LiteralNode(0);
     }
-    return expr;
   }
 
   ExpressionNode _unaExpr() {
-    if (_match(['MINUS', 'UNA_OP', 'INC_DEC_OP'])) {
-      return BinaryExpressionNode(LiteralNode(0), _previous.value, _unaExpr());
-    } else {
-      return _priExpr();
+    try {
+      if (_match(['MINUS', 'UNA_OP', 'INC_DEC_OP'])) {
+        return BinaryExpressionNode(
+            LiteralNode(0), _previous.value, _unaExpr());
+      } else {
+        return _priExpr();
+      }
+    } catch (e) {
+      _addError(e.toString());
+      return LiteralNode(0);
     }
   }
 
   ExpressionNode _priExpr() {
-    if (_match(['NUMBER', 'REAL', 'STRING', 'BOOL'])) {
-      return LiteralNode(_previous.value);
-    } else if (_match(['IDENTIFIER'])) {
-      String identifier = _previous.value;
-      if (_match(['INC_DEC_OP'])) {
-        return BinaryExpressionNode(
-            IdentifierNode(identifier), _previous.value, LiteralNode(0));
-      }
-      return IdentifierNode(identifier);
-    } else if (_match(['LEFT_BRACKET'])) {
-      List<ExpressionNode> elements = [];
-      elements.add(_expression());
-      while (!_check('RIGHT_BRACKET') && !_isAtEnd()) {
-        _consume('COMMA', 'Expected ","');
+    try {
+      if (_match(['NUMBER', 'REAL', 'STRING', 'BOOL'])) {
+        return LiteralNode(_previous.value);
+      } else if (_match(['IDENTIFIER'])) {
+        String identifier = _previous.value;
+        if (_match(['INC_DEC_OP'])) {
+          return BinaryExpressionNode(
+              IdentifierNode(identifier), _previous.value, LiteralNode(0));
+        }
+        return IdentifierNode(identifier);
+      } else if (_match(['LEFT_BRACKET'])) {
+        List<ExpressionNode> elements = [];
         elements.add(_expression());
+        while (!_check('RIGHT_BRACKET') && !_isAtEnd()) {
+          _consume('COMMA', 'Expected ","');
+          elements.add(_expression());
+        }
+        _consume(('RIGHT_BRACKET'), 'Expected "]"');
+        return ArrayLiteral(elements);
+      } else if (_match(['LEFT_PAREN'])) {
+        ExpressionNode expr = _expression();
+        _consume(('RIGHT_PAREN'), 'Expected ")"');
+        return expr;
+      } else if (_match(['PURIFY_DEV'])) {
+        return _purifyDevStatement();
+      } else {
+        throw Exception('${_lineDetails()} ERROR: Invalid expresson');
       }
-      _consume(('RIGHT_BRACKET'), 'Expected ")"');
-      return ArrayLiteral(elements);
-    } else if (_match(['LEFT_PAREN'])) {
-      ExpressionNode expr = _expression();
-      _consume(('RIGHT_PAREN'), 'Expected ")"');
-      return expr;
-    } else if (_match(['PURIFY_DEV'])) {
-      return _purifyDevStatement();
-    } else {
-      throw Exception('[${_peek.line}:${_peek.col}] ERROR: Invalid expresson');
+    } catch (e) {
+      _addError(e.toString());
+      return LiteralNode(0);
     }
   }
 
   IfStatementNode _ifStatement() {
-    _advance();
-    _consume('LEFT_PAREN', 'Expected "("');
-    ExpressionNode condition = _expression();
-    _consume('RIGHT_PAREN', 'Expected ")"');
-    _consume('LEFT_BRACE', 'Expected "{"');
-
-    List<ElseIfStatementNode> elseIfBranches = [];
-    List<StatementNode> thenBranch = _parseBlock();
-    while (_match(['ELSE']) && _check('IF')) {
+    try {
       _advance();
       _consume('LEFT_PAREN', 'Expected "("');
-      ExpressionNode elseIfCondition = _expression();
+      ExpressionNode condition = _expression();
       _consume('RIGHT_PAREN', 'Expected ")"');
       _consume('LEFT_BRACE', 'Expected "{"');
 
-      List<StatementNode> elseIfBody = _parseBlock();
-      elseIfBranches.add(ElseIfStatementNode(elseIfCondition, elseIfBody));
-    }
+      List<ElseIfStatementNode> elseIfBranches = [];
+      List<StatementNode> thenBranch = _parseBlock();
+      while (_match(['ELSE']) && _check('IF')) {
+        _advance();
+        _consume('LEFT_PAREN', 'Expected "("');
+        ExpressionNode elseIfCondition = _expression();
+        _consume('RIGHT_PAREN', 'Expected ")"');
+        _consume('LEFT_BRACE', 'Expected "{"');
 
-    List<StatementNode> elseBranch = [];
-    if (_previous.type == 'ELSE') {
-      _consume('LEFT_BRACE', 'Expected "{"');
-      elseBranch = _parseBlock();
-    }
+        List<StatementNode> elseIfBody = _parseBlock();
+        elseIfBranches.add(ElseIfStatementNode(elseIfCondition, elseIfBody));
+      }
 
-    return IfStatementNode(condition, thenBranch, elseIfBranches, elseBranch);
+      List<StatementNode> elseBranch = [];
+      if (_previous.type == 'ELSE') {
+        _consume('LEFT_BRACE', 'Expected "{"');
+        elseBranch = _parseBlock();
+      }
+
+      return IfStatementNode(condition, thenBranch, elseIfBranches, elseBranch);
+    } catch (e) {
+      _addError(e.toString());
+      return IfStatementNode(LiteralNode(0), [], [], []);
+    }
   }
 
   ForLoopNode _forLoop() {
-    _advance();
-    _consume('LEFT_PAREN', 'Expected "("');
-    VariableDeclarationNode initializer = _variableDeclaration();
-    ExpressionNode condition = _expression();
-    _consume('SEMICOLON', 'Expected ";"');
-    ExpressionNode action = _expression();
-    _consume('RIGHT_PAREN', 'Expected ")"');
-    _consume('LEFT_BRACE', 'Expected "{"');
-    List<StatementNode> statements = _parseBlock();
+    try {
+      _advance();
+      _consume('LEFT_PAREN', 'Expected "("');
+      VariableDeclarationNode initializer = _variableDeclaration();
+      ExpressionNode condition = _expression();
+      _consume('SEMICOLON', 'Expected ";"');
+      ExpressionNode action = _expression();
+      _consume('RIGHT_PAREN', 'Expected ")"');
+      _consume('LEFT_BRACE', 'Expected "{"');
+      List<StatementNode> statements = _parseBlock();
 
-    return ForLoopNode(initializer, condition, action, statements);
+      return ForLoopNode(initializer, condition, action, statements);
+    } catch (e) {
+      _addError(e.toString());
+      return ForLoopNode(
+        VariableDeclarationNode('UNKNOWN', 'UNKNOWN', LiteralNode(0)),
+        LiteralNode(false),
+        LiteralNode(0),
+        [],
+      );
+    }
   }
 
   WhileLoopNode _whileLoop() {
-    _advance();
-    _consume('LEFT_PAREN', 'Expected "("');
-    ExpressionNode condition = _expression();
-    _consume('RIGHT_PAREN', 'Expected ")"');
-    _consume('LEFT_BRACE', 'Expected "{"');
-    List<StatementNode> statements = _parseBlock();
+    try {
+      _advance();
+      _consume('LEFT_PAREN', 'Expected "("');
+      ExpressionNode condition = _expression();
+      _consume('RIGHT_PAREN', 'Expected ")"');
+      _consume('LEFT_BRACE', 'Expected "{"');
+      List<StatementNode> statements = _parseBlock();
 
-    return WhileLoopNode(condition, statements);
+      return WhileLoopNode(condition, statements);
+    } catch (e) {
+      _addError(e.toString());
+      return WhileLoopNode(LiteralNode(false), []);
+    }
   }
 
   PurifyDevNode _purifyDevStatement() {
-    _consume('LEFT_PAREN', 'Expected "("');
-    _consume('VALUE', 'Expected "value"');
-    _consume('COLON', 'Expected ":"');
-    if (!_match(['IDENTIFIER', 'STRING'])) {
-      throw Exception('[${_peek.line}:${_peek.col}] ERROR: purify_dev expects identifier or string as value');
+    try {
+      _consume('LEFT_PAREN', 'Expected "("');
+      _consume('VALUE', 'Expected "value"');
+      _consume('COLON', 'Expected ":"');
+      if (!_match(['IDENTIFIER', 'STRING'])) {
+        throw Exception(
+            '${_lineDetails()} ERROR: purify_dev expects identifier or string as value');
+      }
+      String value = _previous.value;
+      _consume('RIGHT_PAREN', 'Expected ")"');
+      return PurifyDevNode(value);
+    } catch (e) {
+      _addError(e.toString());
+      return PurifyDevNode('UNKNOWN');
     }
-    String value = _previous.value;
-    _consume('RIGHT_PAREN', 'Expected ")"');
-    return PurifyDevNode(value);
   }
 
   ReturnGUI _returnGui() {
-    _advance();
-    _consume('GUI', 'Expected gui');
-    _consume('LEFT_PAREN', 'Expected "("');
-    _consume('CONTENTS', 'Expected "contents"');
-    _consume('COLON', 'Expected ":"');
-    _consume('LEFT_BRACKET', 'Expected "["');
-    List<GUIComponent> components = [];
-    components.add(_component());
-    while (!_check('RIGHT_BRACKET') && !_isAtEnd()) {
-      _consume('COMMA', 'Exected ","');
+    try {
+      _advance();
+      _consume('GUI', 'Expected gui');
+      _consume('LEFT_PAREN', 'Expected "("');
+      _consume('CONTENTS', 'Expected "contents"');
+      _consume('COLON', 'Expected ":"');
+      _consume('LEFT_BRACKET', 'Expected "["');
+      List<GUIComponent> components = [];
       components.add(_component());
-    }
-    _consume('RIGHT_BRACKET', 'Expected "]"');
-    _consume('RIGHT_PAREN', 'Expected ")"');
-    _consume('SEMICOLON', 'Expected ";"');
+      while (!_check('RIGHT_BRACKET') && !_isAtEnd()) {
+        _consume('COMMA', 'Exected ","');
+        components.add(_component());
+      }
+      _consume('RIGHT_BRACKET', 'Expected "]"');
+      _consume('RIGHT_PAREN', 'Expected ")"');
+      _consume('SEMICOLON', 'Expected ";"');
 
-    return ReturnGUI(components);
+      return ReturnGUI(components);
+    } catch (e) {
+      _addError(e.toString());
+      return ReturnGUI([]);
+    }
   }
 
   GUIComponent _component() {
-    if (_match(['ROW'])) {
-      return _rowOrCol(isRow: true);
-    } else if (_match(['COLUMN'])) {
-      return _rowOrCol(isRow: false);
-    } else if (_check('BUTTON')) {
-      return _button();
-    } else if (_check('FIELD')) {
-      return _field();
-    } else if (_check('TEXT')) {
-      return _text();
-    } else {
-      throw Exception(
-          'Unrecognized GUI Component at line[${_peek.line}:${_peek.col}] "${_peek.value}"');
+    try {
+      if (_match(['ROW'])) {
+        return _rowOrCol(isRow: true);
+      } else if (_match(['COLUMN'])) {
+        return _rowOrCol(isRow: false);
+      } else if (_check('BUTTON')) {
+        return _button();
+      } else if (_check('FIELD')) {
+        return _field();
+      } else if (_check('TEXT')) {
+        return _text();
+      } else {
+        throw Exception(
+            'Unrecognized GUI Component at line[${_peek.line}:${_peek.col}] "${_peek.value}"');
+      }
+    } catch (e) {
+      _addError(e.toString());
+      return TextComponent('UNKNOWN');
     }
   }
 
   GUIComponent _rowOrCol({required bool isRow}) {
-    _consume('LEFT_PAREN', 'Expected "("');
-    _consume('CONTENTS', 'Expected "contents"');
-    _consume('COLON', 'Expected ":"');
-    _consume('LEFT_BRACKET', 'Expected "["');
-    List<GUIComponent> children = [];
-    children.add(_component());
-    while (!_check('RIGHT_BRACKET') && !_isAtEnd()) {
-      _consume('COMMA', 'Expected ","');
+    try {
+      _consume('LEFT_PAREN', 'Expected "("');
+      _consume('CONTENTS', 'Expected "contents"');
+      _consume('COLON', 'Expected ":"');
+      _consume('LEFT_BRACKET', 'Expected "["');
+      List<GUIComponent> children = [];
       children.add(_component());
-    }
-    _consume('RIGHT_BRACKET', 'Expected "]"');
-    _consume('RIGHT_PAREN', 'Expected ")"');
+      while (!_check('RIGHT_BRACKET') && !_isAtEnd()) {
+        _consume('COMMA', 'Expected ","');
+        children.add(_component());
+      }
+      _consume('RIGHT_BRACKET', 'Expected "]"');
+      _consume('RIGHT_PAREN', 'Expected ")"');
 
-    return isRow ? RowComponent(children) : ColumnComponent(children);
+      return isRow ? RowComponent(children) : ColumnComponent(children);
+    } catch (e) {
+      _addError(e.toString());
+      return TextComponent('UNKNOWN');
+    }
   }
 
   ButtonComponent _button() {
-    _advance();
-    _consume('LEFT_PAREN', 'Expected "("');
-    _consume('ACTION', 'Expected "action"');
-    _consume('COLON', 'Expected ":"');
-    _consume('LEFT_PAREN', 'Expected "("');
-    _consume('RIGHT_PAREN', 'Expected ")"');
-    _consume('LEFT_BRACE', 'Expected "{"');
-    List<StatementNode> actions = _parseBlock();
-    _consume('COMMA', 'Expected ","');
-    _consume('LABEL', 'Expected "label"');
-    _consume('COLON', 'Expected ":"');
-    if (!_match(['STRING', 'IDENTIFIER'])) {
-      throw Exception(
-          '[${_peek.line}:${_peek.col}] ERROR: Expected STRING or IDENTIFIER');
-    }
-    String label = _previous.value;
-    _consume('RIGHT_PAREN', 'Expected ")"');
+    try {
+      _advance();
+      _consume('LEFT_PAREN', 'Expected "("');
+      _consume('ACTION', 'Expected "action"');
+      _consume('COLON', 'Expected ":"');
+      _consume('LEFT_PAREN', 'Expected "("');
+      _consume('RIGHT_PAREN', 'Expected ")"');
+      _consume('LEFT_BRACE', 'Expected "{"');
+      List<StatementNode> actions = _parseBlock();
+      _consume('COMMA', 'Expected ","');
+      _consume('LABEL', 'Expected "label"');
+      _consume('COLON', 'Expected ":"');
+      if (!_match(['STRING', 'IDENTIFIER'])) {
+        throw Exception(
+            '[${_peek.line}:${_peek.col}] ERROR: Expected STRING or IDENTIFIER');
+      }
+      String label = _previous.value;
+      _consume('RIGHT_PAREN', 'Expected ")"');
 
-    return ButtonComponent(label, actions);
+      return ButtonComponent(label, actions);
+    } catch (e) {
+      _addError(e.toString());
+      return ButtonComponent('UNKNOWN', []);
+    }
   }
 
   FieldComponent _field() {
-    _advance();
-    _consume('LEFT_PAREN', 'Expected "("');
-    _consume('VALUE', 'Expected "value"');
-    _consume('COLON', 'Expected ":"');
-    _consume('IDENTIFIER', 'Expected IDENTIFIER');
-    String value = _previous.value;
-    _consume('RIGHT_PAREN', 'Expected ")"');
+    try {
+      _advance();
+      _consume('LEFT_PAREN', 'Expected "("');
+      _consume('VALUE', 'Expected "value"');
+      _consume('COLON', 'Expected ":"');
+      _consume('IDENTIFIER', 'Expected IDENTIFIER');
+      String value = _previous.value;
+      _consume('RIGHT_PAREN', 'Expected ")"');
 
-    return FieldComponent(value);
+      return FieldComponent(value);
+    } catch (e) {
+      _addError(e.toString());
+      return FieldComponent('UNKNOWN');
+    }
   }
 
   TextComponent _text() {
-    _advance();
-    _consume('LEFT_PAREN', 'Expected "("');
-    _consume('LABEL', 'Expected "label"');
-    _consume('COLON', 'Expected ":"');
-    if (!_match(['STRING', 'IDENTIFIER'])) {
-      throw Exception('Expected STRING or IDENTIFIER');
-    }
-    String label = _previous.value;
-    _consume('RIGHT_PAREN', 'Expected ")"');
+    try {
+      _advance();
+      _consume('LEFT_PAREN', 'Expected "("');
+      _consume('LABEL', 'Expected "label"');
+      _consume('COLON', 'Expected ":"');
+      if (!_match(['STRING', 'IDENTIFIER'])) {
+        throw Exception('Expected STRING or IDENTIFIER');
+      }
+      String label = _previous.value;
+      _consume('RIGHT_PAREN', 'Expected ")"');
 
-    return TextComponent(label);
+      return TextComponent(label);
+    } catch (e) {
+      _addError(e.toString());
+      return TextComponent('UNKWOWN');
+    }
   }
 
   List<StatementNode> _parseBlock() {
     List<StatementNode> statements = [];
     while (!_check('RIGHT_BRACE') && !_isAtEnd()) {
-      statements.add(_statement());
+      try {
+        statements.add(_statement());
+      } catch (e) {
+        _addError(e.toString());
+      }
     }
     _consume('RIGHT_BRACE', 'Expected "}"');
     return statements;
