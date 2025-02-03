@@ -7,6 +7,8 @@ import 'package:flutter_code_editor/flutter_code_editor.dart';
 import 'package:flutter_highlight/themes/googlecode.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:lextax_analysis/model/ast.dart';
+import 'package:lextax_analysis/model/json_handler.dart';
 import 'package:lextax_analysis/model/lexer.dart';
 import 'package:lextax_analysis/model/parser.dart';
 import 'package:lextax_analysis/model/token.dart';
@@ -21,11 +23,12 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final CodeController _codeController =
-      CodeController(text: 'gui main() {\n\tprint("hello, xbox!\\n");\n}');
+  final CodeController _codeController = CodeController();
   final _tokenRows = <DataRow>[];
   final CsvHandler _csvHandler = CsvHandler();
-  bool _autosave = false;
+  final JsonHandler _jsonHandler = JsonHandler();
+  bool _saveCsv = false;
+  bool _saveJson = false;
 
   void _populateTokens(List<Token> tokens) {
     setState(() {
@@ -48,6 +51,12 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       _tokenRows.clear();
     });
+  }
+
+  @override
+  void initState() {
+    _codeController.text = 'gui main() {\n\tprint(\'hello, xbox!\\n\');\n}';
+    super.initState();
   }
 
   @override
@@ -115,12 +124,7 @@ class _HomePageState extends State<HomePage> {
                                 _codeController.text = input;
                               });
                             } else {
-                              const SnackBar snackbar = SnackBar(
-                                content: Text('Invalid file extension.'),
-                                behavior: SnackBarBehavior.floating,
-                              );
-                              Globals.scaffoldMessengerKey.currentState
-                                  ?.showSnackBar(snackbar);
+                              Globals.snackBarNotif('Invalid file extension.');
                             }
                           }
                         },
@@ -138,19 +142,14 @@ class _HomePageState extends State<HomePage> {
                           lexer.tokenize();
                           if (lexer.tokens.isNotEmpty) {
                             _populateTokens(lexer.tokens);
-                            if (_autosave) {
+                            if (_saveCsv) {
                               List<List<String>> tokenList =
                                   _csvHandler.tokensToList(lexer.tokens);
                               String csv = _csvHandler.listToCsv(tokenList);
                               await _csvHandler.downloadCsv(csv);
                             }
                           } else {
-                            const SnackBar snackbar = SnackBar(
-                              content: Text('No file detected.'),
-                              behavior: SnackBarBehavior.floating,
-                            );
-                            Globals.scaffoldMessengerKey.currentState
-                                ?.showSnackBar(snackbar);
+                            Globals.snackBarNotif('No file detected.');
                           }
                         },
                         label: const Text('Tokenize'),
@@ -169,31 +168,17 @@ class _HomePageState extends State<HomePage> {
                             _populateTokens(lexer.tokens);
                             if (lexer.tokens.last.type == 'INVALID_TOKEN') {
                               Token invalid = lexer.tokens.last;
-                              SnackBar snackbar = SnackBar(
-                                content: Text(
-                                  'INVALID_TOKEN detected at line ${invalid.line}:${invalid.col}. Fix program before parsing.',
-                                ),
-                                behavior: SnackBarBehavior.floating,
-                              );
-                              Globals.scaffoldMessengerKey.currentState
-                                  ?.showSnackBar(snackbar);
+                              Globals.snackBarNotif(
+                                  'INVALID_TOKEN detected at line ${invalid.line}:${invalid.col}. Fix program before parsing.');
                               return;
                             }
                             Parser parser = Parser(lexer.tokens);
-                            parser.parse();
-                            if (_autosave) {
-                              List<List<String>> tokenList =
-                                  _csvHandler.tokensToList(lexer.tokens);
-                              String csv = _csvHandler.listToCsv(tokenList);
-                              await _csvHandler.downloadCsv(csv);
+                            ProgramNode? program = parser.parse();
+                            if (_saveJson && program != null) {
+                              await _jsonHandler.downloadJson(program);
                             }
                           } else {
-                            const SnackBar snackbar = SnackBar(
-                              content: Text('No file detected.'),
-                              behavior: SnackBarBehavior.floating,
-                            );
-                            Globals.scaffoldMessengerKey.currentState
-                                ?.showSnackBar(snackbar);
+                            Globals.snackBarNotif('No file detected.');
                           }
                         },
                         label: const Text('Analyze'),
@@ -296,24 +281,49 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
               const Spacer(),
-              Padding(
-                padding: const EdgeInsets.only(right: 16.0),
-                child: Row(
-                  children: [
-                    Switch(
-                      value: _autosave,
-                      onChanged: (bool value) {
-                        setState(
-                          () {
-                            _autosave = value;
+              const Text('Output Settings'),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(right: 16.0),
+                    child: Row(
+                      children: [
+                        Switch(
+                          value: _saveCsv,
+                          onChanged: (bool value) {
+                            setState(
+                              () {
+                                _saveCsv = value;
+                              },
+                            );
                           },
-                        );
-                      },
+                        ),
+                        _spawnHorizontalSpacer(4.0),
+                        const Text('Tokens (.csv)'),
+                      ],
                     ),
-                    _spawnHorizontalSpacer(4.0),
-                    const Text('Save as .csv'),
-                  ],
-                ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 16.0),
+                    child: Row(
+                      children: [
+                        Switch(
+                          value: _saveJson,
+                          onChanged: (bool value) {
+                            setState(
+                              () {
+                                _saveJson = value;
+                              },
+                            );
+                          },
+                        ),
+                        _spawnHorizontalSpacer(4.0),
+                        const Text('AST (.json)'),
+                      ],
+                    ),
+                  ),
+                ],
               ),
               _spawnVerticalSpacer(12.0),
             ],
