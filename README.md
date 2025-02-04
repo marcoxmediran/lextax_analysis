@@ -11,7 +11,7 @@ flutter pub get
 # Test the web app
 flutter run -d chrome   # use "-d web-server" if you want to use a different browser
 ```
-## Building for Deployment
+## Building For Deployment
 ```bash
 export REPO_NAME="GITHUB_REPOSITORY_NAME"
 flutter build web --base-href=$REPO_NAME
