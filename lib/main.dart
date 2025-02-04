@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:lextax_analysis/globals.dart';
 import 'package:lextax_analysis/ui/home.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -16,7 +15,6 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Lextax Analyzer',
       debugShowCheckedModeBanner: false,
-      scaffoldMessengerKey: Globals.scaffoldMessengerKey,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
         useMaterial3: true,
