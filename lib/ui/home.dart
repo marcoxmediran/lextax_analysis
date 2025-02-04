@@ -12,7 +12,6 @@ import 'package:lextax_analysis/model/json_handler.dart';
 import 'package:lextax_analysis/model/lexer.dart';
 import 'package:lextax_analysis/model/parser.dart';
 import 'package:lextax_analysis/model/token.dart';
-import 'package:lextax_analysis/globals.dart';
 import 'package:lextax_analysis/model/csv_handler.dart';
 
 class HomePage extends StatefulWidget {
@@ -24,6 +23,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final CodeController _codeController = CodeController();
+  final CodeController _logController = CodeController();
   final _tokenRows = <DataRow>[];
   final CsvHandler _csvHandler = CsvHandler();
   final JsonHandler _jsonHandler = JsonHandler();
@@ -53,15 +53,30 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  void _setLogs(String logs) {
+    setState(() {
+      _logController.text = logs;
+    });
+  }
+
+  void _clear() {
+    setState(() {
+      _codeController.clear();
+      _logController.clear();
+    });
+  }
+
   @override
   void initState() {
     _codeController.text = 'gui main() {\n\tprint(\'hello, xbox!\\n\');\n}';
+    _logController.clear();
     super.initState();
   }
 
   @override
   void dispose() {
     _codeController.dispose();
+    _logController.dispose();
     super.dispose();
   }
 
@@ -76,12 +91,18 @@ class _HomePageState extends State<HomePage> {
             width: max(getScreenWidth() * 0.45, 400),
             decoration: BoxDecoration(color: Theme.of(context).hoverColor),
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.only(
+                top: 8.0,
+                left: 16.0,
+                right: 16.0,
+                bottom: 8.0,
+              ),
               child: Column(
                 children: [
                   const Text('Edit your code here'),
-                  _spawnVerticalSpacer(16.0),
+                  _spawnVerticalSpacer(4.0),
                   Expanded(
+                    flex: 2,
                     child: CodeTheme(
                       data: CodeThemeData(styles: googlecodeTheme),
                       child: SingleChildScrollView(
@@ -94,6 +115,32 @@ class _HomePageState extends State<HomePage> {
                               height: 1.5,
                             ),
                           ),
+                          textStyle: GoogleFonts.jetBrainsMono(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15.0,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  _spawnVerticalSpacer(4.0),
+                  const Text('Software Logs'),
+                  _spawnVerticalSpacer(4.0),
+                  Expanded(
+                    flex: 1,
+                    child: CodeTheme(
+                      data: CodeThemeData(styles: googlecodeTheme),
+                      child: SingleChildScrollView(
+                        child: CodeField(
+                          background: Colors.transparent,
+                          controller: _logController,
+                          gutterStyle: GutterStyle(
+                            textStyle: GoogleFonts.jetBrainsMono(
+                              fontSize: 16.0,
+                              height: 1.5,
+                            ),
+                          ),
+                          readOnly: true,
                           textStyle: GoogleFonts.jetBrainsMono(
                             fontWeight: FontWeight.w600,
                             fontSize: 15.0,
@@ -124,7 +171,7 @@ class _HomePageState extends State<HomePage> {
                                 _codeController.text = input;
                               });
                             } else {
-                              Globals.snackBarNotif('Invalid file extension.');
+                              _setLogs('Invalid file extension.');
                             }
                           }
                         },
@@ -132,7 +179,7 @@ class _HomePageState extends State<HomePage> {
                         tooltip: 'Upload a File',
                       ),
                       IconButton(
-                        onPressed: () => _codeController.clear(),
+                        onPressed: () => _clear(),
                         icon: const Icon(Icons.backspace),
                       ),
                       const Spacer(),
@@ -149,7 +196,7 @@ class _HomePageState extends State<HomePage> {
                               await _csvHandler.downloadCsv(csv);
                             }
                           } else {
-                            Globals.snackBarNotif('No file detected.');
+                            _setLogs('No file detected.');
                           }
                         },
                         label: const Text('Tokenize'),
@@ -168,17 +215,18 @@ class _HomePageState extends State<HomePage> {
                             _populateTokens(lexer.tokens);
                             if (lexer.tokens.last.type == 'INVALID_TOKEN') {
                               Token invalid = lexer.tokens.last;
-                              Globals.snackBarNotif(
-                                  'INVALID_TOKEN detected at line ${invalid.line}:${invalid.col}. Fix program before parsing.');
+                              _setLogs(
+                                  'INVALID_TOKEN detected at [${invalid.line}:${invalid.col}]. Fix program before parsing.');
                               return;
                             }
                             Parser parser = Parser(lexer.tokens);
                             ProgramNode? program = parser.parse();
+                            _setLogs(parser.getLogs());
                             if (_saveJson && program != null) {
                               await _jsonHandler.downloadJson(program);
                             }
                           } else {
-                            Globals.snackBarNotif('No file detected.');
+                            _setLogs('No file detected.');
                           }
                         },
                         label: const Text('Analyze'),
@@ -325,7 +373,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ],
               ),
-              _spawnVerticalSpacer(12.0),
+              _spawnVerticalSpacer(4.0),
             ],
           ),
         ],

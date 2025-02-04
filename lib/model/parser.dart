@@ -42,8 +42,12 @@ class Parser {
     if (_check(type)) {
       return _advance();
     }
-    _errors
-        .add('${_lineDetails()} [ERROR]: $message after "${_previous.value}".');
+
+    if (!_isAtEnd() &&
+        (_errors.isEmpty || !_errors.last.contains(_lineDetails()))) {
+      _errors.add(
+          'ERROR at ${_lineDetails()}: $message after "${_previous.value}"');
+    }
 
     return _previous;
   }
@@ -61,18 +65,16 @@ class Parser {
       'RETURN',
       'ROW',
       'COLUMN',
-      'BUTTON'
-          'FIELD',
-      'TEXT'
-          'SEMICOLON',
+      'BUTTON',
+      'FIELD',
+      'TEXT',
+      'SEMICOLON',
+      'RIGHT_BRACKET',
+      'RIGHT_PAREN',
     ];
 
     while (!_isAtEnd()) {
-      if (_previous.type == 'SEMICOLON') {
-        return;
-      }
-
-      if (syncTokens.contains(_peek.type)) {
+      if (syncTokens.contains(_previous.type)) {
         return;
       }
 
@@ -89,7 +91,7 @@ class Parser {
   }
 
   void _addError(String e) {
-    _errors.add(_formatError(e));
+    _errors.add(_formatError(e).trim());
     _synchronize();
   }
 
@@ -100,17 +102,21 @@ class Parser {
     } catch (e) {
       _errors.add(_formatError(e.toString()));
     }
-    if (_errors.isEmpty) {
-      Globals.snackBarNotif('Parsing completed. No errors generated.');
-    } else {
-      String errorMessage =
-          'Parsing completed. Generated ${_errors.length} error(s):';
-      for (var error in _errors) {
-        errorMessage += '\n$error';
-      }
-      Globals.snackBarNotif(errorMessage);
-    }
     return program;
+  }
+
+  String getLogs() {
+    String message = '';
+    if (_errors.isEmpty) {
+      message += 'Parsing completed. No errors generated';
+      return message;
+    } else {
+      message += 'Parsing completed. Generated ${_errors.length} error(s):';
+      for (String error in _errors) {
+        message += '\n$error';
+      }
+      return message;
+    }
   }
 
   ProgramNode _program() {
@@ -143,11 +149,11 @@ class Parser {
         return _returnGui();
       } else {
         throw Exception(
-            '${_lineDetails()} ERROR: Unexpected token: ${_peek.value}');
+            'ERROR at ${_lineDetails()}: Unexpected token: ${_peek.value}');
       }
     } catch (e) {
       _addError(e.toString());
-      return ErrorNode(_peek.line, _peek.col);
+      return _statement();
     }
   }
 
@@ -357,7 +363,8 @@ class Parser {
       } else if (_match(['PURIFY_DEV'])) {
         return _purifyDevStatement();
       } else {
-        throw Exception('${_lineDetails()} ERROR: Invalid expresson');
+        throw Exception(
+            'ERROR at ${_lineDetails()}: Invalid expresson after "${_previous.value}"');
       }
     } catch (e) {
       _addError(e.toString());
@@ -446,7 +453,7 @@ class Parser {
       _consume('COLON', 'Expected ":"');
       if (!_match(['IDENTIFIER', 'STRING'])) {
         throw Exception(
-            '${_lineDetails()} ERROR: purify_dev expects identifier or string as value');
+            'ERROR at ${_lineDetails()}: purify_dev expects identifier or string as value');
       }
       String value = _previous.value;
       _consume('RIGHT_PAREN', 'Expected ")"');
@@ -496,7 +503,7 @@ class Parser {
         return _text();
       } else {
         throw Exception(
-            'Unrecognized GUI Component at line[${_peek.line}:${_peek.col}] "${_peek.value}"');
+            'ERROR at ${_lineDetails()}: Unrecognized GUI Component "${_peek.value}"');
       }
     } catch (e) {
       _addError(e.toString());
@@ -541,7 +548,7 @@ class Parser {
       _consume('COLON', 'Expected ":"');
       if (!_match(['STRING', 'IDENTIFIER'])) {
         throw Exception(
-            '[${_peek.line}:${_peek.col}] ERROR: Expected STRING or IDENTIFIER');
+            'ERROR at ${_lineDetails()}: Expected STRING or IDENTIFIER');
       }
       String label = _previous.value;
       _consume('RIGHT_PAREN', 'Expected ")"');
