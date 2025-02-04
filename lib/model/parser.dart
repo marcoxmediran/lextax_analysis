@@ -1,4 +1,3 @@
-import 'package:lextax_analysis/globals.dart';
 import 'package:lextax_analysis/model/token.dart';
 import 'package:lextax_analysis/model/ast.dart';
 
